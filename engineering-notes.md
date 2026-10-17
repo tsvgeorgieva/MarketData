@@ -21,7 +21,29 @@ A living document for the VSG technical assessment. It records the decisions mad
 | Ingestion pipeline | One combined `kline_1m` stream (`data-stream.binance.vision`, URL built from the DB's Monitored Symbols). Reconnect on `serverShutdown` or any drop with jittered exponential backoff (1s to 60s); no proactive 24h rotation or liveness watchdog. After every (re)connect and symbol add, backfill the trailing 24h from REST klines (subscribe first). Writes are insert-if-absent on `(Symbol, OpenTime)` through a bounded channel and a single batching writer. The reconcile loop diffs the DB against `LIST_SUBSCRIPTIONS`. `/health/live` and `/health/ready` (Binance down = Degraded, DB down = Unhealthy), with reconnect counts tracked | Always backfilling 24h is stateless and heals any hole whatever its cause, at the cost of re-reading ~1,440 rows per symbol per reconnect, acceptable while reconnects are rare. Never overwriting is right because Binance is the only source. The channel keeps a stalled DB from blocking the socket. Rotation, watchdog, a periodic gap scan and metrics are future improvements |
 | Deployment | Written Azure proposal plus working `docker compose up`; no real cloud deploy | Time budget (about 10-12 hours) |
 
-Open decisions (symbol management, ingestion pipeline, data model, API surface, console client, solution structure) are tracked as tickets on the map. Vocabulary is in [GLOSSARY.md](GLOSSARY.md); plain-language background is in [docs/primer-market-data.md](docs/primer-market-data.md); sourced research is in [docs/research/](docs/research/).
+Open decisions (data model, API surface, console client, solution structure) are tracked as tickets on the map. Vocabulary is in [GLOSSARY.md](GLOSSARY.md); plain-language background is in [docs/primer-market-data.md](docs/primer-market-data.md); sourced research is in [docs/research/](docs/research/).
+
+## Future improvements
+
+Deliberately not built, to keep the required scope clean within the time budget. Each item says what it would buy and where the decision to defer was made. Items are added as tickets defer them.
+
+| Improvement | What it would buy | Deferred in |
+| --- | --- | --- |
+| Run ingestion as a separate worker service | Scale the API and the ingester independently, isolate failures, and avoid duplicate Binance connections when the API scales out | Architecture decision |
+| Real Azure deployment and CI/CD pipeline | Repeatable releases and a live environment; the written proposal plus `docker compose up` cover the assessment | Map scope |
+| Periodic reconciliation scan for missing minutes | Heals holes older than the 24h backfill window, for example after a long outage | SMA contract, ingestion pipeline |
+| Backfill from the last stored candle (plus the scan) | Less re-reading per reconnect than always fetching 24h; worth it only if reconnects turn out to be frequent | Ingestion pipeline |
+| Proactive, make-before-break rotation of the 24h connection | No gap at Binance's connection limit | Ingestion pipeline |
+| Liveness watchdog on the socket | Detects a silently stalled connection that never closes | Ingestion pipeline |
+| Metrics export (reconnect counts, backfill duration, lag) | Alerting and dashboards instead of only logs and `/health/ready` | Ingestion pipeline |
+| Pick up corrected klines (upsert instead of insert-if-absent) | Stored candles follow any correction Binance publishes | Ingestion pipeline |
+| Entra ID / JWT with roles for the admin API | Per-user identity, auditing and revocation instead of one shared API key | Symbol management |
+| Purge or retention policy for removed symbols and old candles | Bounded storage growth | Symbol management |
+| Per-bucket series in the SMA response | Lets a client chart the data points behind the average | SMA contract |
+| Optional forward-fill of missing buckets | A gap-free series for consumers who prefer it, clearly labelled as filled | SMA contract |
+| Volume-weighted or Binance-weighted 24h average | An average that reflects trading activity rather than time | Price and 24h average semantics |
+
+Not yet discussed, listed on the map as candidates: response caching for the average endpoints, and wider observability beyond the health endpoints.
 
 ## AI usage
 
@@ -44,6 +66,7 @@ AI assistance: Claude Code (Claude Sonnet 5.5) in the desktop app, using the `re
 | 11 | "also interested what our options are for healing the data if we have such gaps" | Listed backfill options (REST klines on startup, on reconnect, on symbol add; periodic reconciliation) | Kept out of the SMA contract; recorded as pointers on the ingestion (#6) and symbol management (#5) tickets |
 | 12 | Answered "Design symbol management" (Q1-Q9: yes). Asked whether Q4 meant the Add endpoint waits for market data, and what "reconcile loop" means | Claimed the ticket, grilled nine questions, explained that the add returns after the DB write and the reconcile loop does the subscribing, recorded the resolution, closed the ticket, left pointers on #6, #7 and #8, updated the map and `GLOSSARY.md` (Removed Symbol) | Accepted all nine recommendations, including the API key on admin routes. The AI first posted two pointer comments on the wrong tickets (misnumbered) and deleted and reposted them |
 | 13 | Answered "Design the ingestion pipeline" (Q1-Q9). Asked how the two Binance hosts differ and what "initial streams from the desired set" meant; asked to treat proactive rotation and the watchdog as future improvements; asked whether a backfill crashing halfway is possible; was concerned about rewriting data on every 24h backfill; chose to keep the buffer after the AI conceded it | Claimed the ticket, ran a live check (subscribe acks do not validate; quiet symbols send no frames; the market-data host works), grilled in rounds, recorded the resolution, closed the ticket, left pointers on #7, #8 and #10, updated the map and `GLOSSARY.md` (Backfill, Gap) | Accepted Q1, Q2, Q8, Q9. Changed Q3 and Q4 (no rotation, no watchdog). The half-finished-backfill question showed a last-stored snapshot can skip a hole, so Q5 became always backfill the trailing 24h. Changed Q6 to insert-if-absent, rejecting the AI's overwrite. Reversed the AI's brief concession on Q7 and kept the bounded channel |
+| 14 | "where are we keeping track of future improvements?" then "Yes, add a Future improvements section ... seeded from the deferred items in the map's Out of scope list and the closed tickets' resolutions" | Found that future improvements were scattered across the map and one table cell, read the closed tickets' resolutions and added the Future improvements section | Accepted the proposal as written |
 
 ### Corrections and caveats worth knowing
 
