@@ -13,9 +13,12 @@ A living document for the VSG technical assessment. It records the decisions mad
 | Price | Close of a closed 1m Candle | One definition serves both endpoints |
 | 24h average | Simple mean of closed 1m closes over a rolling 24h, partial windows allowed, `404` when there is no data | Plain reading of the assessment; Binance's weighted average and a volume-weighted mean are documented alternatives |
 | Precision | `decimal` end to end, results rounded to 8 dp | Binance sends prices as strings; avoids floating-point error |
+| SMA window | `s` is the end Reference Instant (omitted = now): the `n` Buckets ending with the one containing `s`. Bucket value = last Candle's close; the in-progress Bucket is included; a Candle counts only if closed by `s` | Trailing SMA is the standard definition and a start that defaults to now would have no data. Departs from the PDF's word "starting", stated in the README |
+| SMA alignment and gaps | Everything UTC, weeks start Monday 00:00 (observed on Binance, undocumented). Missing Buckets are not filled; average what exists, `isPartial` when fewer than `n`, `404` when none | Same "average what exists" rule as the 24h average; forward-fill would present uncollected data as real. Forward-fill is a README trade-off |
+| SMA API contract | One object (`symbol`, `period`, `requested`, `from`, `to`, `average`, `dataPoints`, `isPartial`, `latestBucketInProgress`); `n` 1..1000 required, `p` one of five values (case-sensitive) required, `s` optional; bad input is `400` ProblemDetails | The PDF says "returns the SMA", singular; strict validation, no silent defaults |
 | Deployment | Written Azure proposal plus working `docker compose up`; no real cloud deploy | Time budget (about 10-12 hours) |
 
-Open decisions (SMA contract, symbol management, ingestion pipeline, data model, API surface, console client, solution structure) are tracked as tickets on the map. Vocabulary is in [GLOSSARY.md](GLOSSARY.md); plain-language background is in [docs/primer-market-data.md](docs/primer-market-data.md); sourced research is in [docs/research/](docs/research/).
+Open decisions (symbol management, ingestion pipeline, data model, API surface, console client, solution structure) are tracked as tickets on the map. Vocabulary is in [GLOSSARY.md](GLOSSARY.md); plain-language background is in [docs/primer-market-data.md](docs/primer-market-data.md); sourced research is in [docs/research/](docs/research/).
 
 ## AI usage
 
@@ -34,6 +37,8 @@ AI assistance: Claude Code (Claude Sonnet 5.5) in the desktop app, using the `re
 | 7 | "first, give me an introduction to the domain terms used in binance API and the simple moving average algorithm, to a person with minimal finance knowledge" | Wrote a plain-language explanation | Kept; added as `docs/primer-market-data.md` |
 | 8 | Answered round 1 of "Define the price and 24h average semantics" (Q1-Q7: yes) | Recorded the decisions on the ticket, created `GLOSSARY.md` | Accepted all seven recommendations |
 | 9 | "lets include what we have by now about AI prompts as well, in engineering-notes.md" | Created this file | - |
+| 10 | Answered two rounds of "Define the Simple Moving Average contract" (Q1-Q4, then Q5-Q9) | Claimed the ticket, grilled in numbered rounds, recorded the resolution, closed the ticket, updated the map and `GLOSSARY.md` (Bucket, Simple Moving Average, Reference Instant, In-progress Bucket) | Accepted all nine recommendations. Asked what forward-fill means before accepting Q5 (no fill) |
+| 11 | "also interested what our options are for healing the data if we have such gaps" | Listed backfill options (REST klines on startup, on reconnect, on symbol add; periodic reconciliation) | Kept out of the SMA contract; recorded as pointers on the ingestion (#6) and symbol management (#5) tickets |
 
 ### Corrections and caveats worth knowing
 

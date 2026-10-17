@@ -25,13 +25,21 @@ The length of time one data point represents in a moving average: one of 1m, 5m,
 _Avoid_: Interval, timeframe, resolution
 
 **Bucket**:
-The group of consecutive Candles that make up one data point of a given Period; its value is the Price of its last Candle.
+The group of consecutive Candles that make up one data point of a given Period, aligned to UTC (weeks start Monday 00:00). Its value is the Price of its last Candle. A Bucket with no Candles is missing and contributes nothing; it is never filled in.
 _Avoid_: Window, bar
+
+**Reference Instant**:
+The moment a moving average is calculated as of: the requested start/reference time, or now when none is given. The Bucket containing it is the newest data point, and a Candle counts only if it had closed by then.
+_Avoid_: Start time, as-of date
+
+**In-progress Bucket**:
+The Bucket that contains the Reference Instant when its Period has not yet fully elapsed; its value is the Price of the latest closed Candle so far.
+_Avoid_: Open bucket, partial bucket
 
 **24h Average Price**:
 The simple arithmetic mean of the Prices of all Candles in the last 24 hours, using only the Candles available.
 _Avoid_: Daily average, 24h ticker price
 
 **Simple Moving Average**:
-The arithmetic mean of the Prices of the latest `n` Buckets of a given Period.
+The arithmetic mean of the Prices of the `n` consecutive Buckets of a given Period that end with the Bucket containing the Reference Instant, using only the Buckets that exist. It is partial when fewer than `n` exist.
 _Avoid_: SMA line, rolling average
