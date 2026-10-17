@@ -20,6 +20,14 @@ _Avoid_: Deleted symbol, archived symbol
 A stored, closed one-minute summary of a Symbol's trading: open, high, low, close and volume. Only closed Candles are stored.
 _Avoid_: Kline, price update, tick, sample
 
+**Backfill**:
+Fetching recently closed Candles from Binance's history to fill minutes the system did not collect live, for example after a disconnect or when a Symbol is added. It only adds Candles that are missing.
+_Avoid_: Replay, resync, repair
+
+**Gap**:
+A minute with no stored Candle for a Monitored Symbol. It can be a minute the system missed or a minute with no trades; either way it is never filled in when reading.
+_Avoid_: Hole, missing data
+
 **Price**:
 The close value of a Candle. It is the only price the system stores and serves.
 _Avoid_: Last price, quote, rate
