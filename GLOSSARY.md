@@ -13,11 +13,11 @@ A Symbol whose data the system currently collects. An administrator adds and rem
 _Avoid_: Subscribed symbol, tracked symbol
 
 **Removed Symbol**:
-A Symbol that was a Monitored Symbol and no longer is. Collection stops but its stored Candles are kept, and the price endpoints treat it as unknown until it is added again.
+A Symbol that was a Monitored Symbol and no longer is. Collection stops but its stored Candles are kept, and the price endpoints treat it as unknown until it is added again, when it resumes with its history.
 _Avoid_: Deleted symbol, archived symbol
 
 **Candle**:
-A stored, closed one-minute summary of a Symbol's trading: open, high, low, close and volume. Only closed Candles are stored.
+A stored, closed one-minute summary of a Symbol's trading: open, high, low, close and volume. Only closed Candles are stored. A Candle is identified by its Symbol and the time it opened, and is never changed once stored; Candles are kept indefinitely.
 _Avoid_: Kline, price update, tick, sample
 
 **Backfill**:
