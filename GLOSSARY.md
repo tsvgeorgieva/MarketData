@@ -9,8 +9,12 @@ A tradable pair identified by a code such as `BTCUSDT` (the asset on the left, p
 _Avoid_: Ticker, pair, instrument
 
 **Monitored Symbol**:
-A Symbol whose data the system currently collects.
+A Symbol whose data the system currently collects. An administrator adds and removes them at runtime.
 _Avoid_: Subscribed symbol, tracked symbol
+
+**Removed Symbol**:
+A Symbol that was a Monitored Symbol and no longer is. Collection stops but its stored Candles are kept, and the price endpoints treat it as unknown until it is added again.
+_Avoid_: Deleted symbol, archived symbol
 
 **Candle**:
 A stored, closed one-minute summary of a Symbol's trading: open, high, low, close and volume. Only closed Candles are stored.
