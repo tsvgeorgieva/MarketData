@@ -1,4 +1,5 @@
 using MarketData.Application.Ingestion;
+using MarketData.Application.Prices;
 using MarketData.Application.Symbols;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -20,8 +21,9 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddSingleton<CandleQueue>();
-        services.AddSingleton<CandleWriter>();
-        services.AddSingleton<IngestionService>();
+        services.AddSingleton<ICandleWriterService, CandleWriterService>();
+        services.AddSingleton<IIngestionService, IngestionService>();
+        services.AddSingleton<IPriceAnalyticsService, PriceAnalyticsService>();
         return services;
     }
 }

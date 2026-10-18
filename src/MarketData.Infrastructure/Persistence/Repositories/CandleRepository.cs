@@ -1,6 +1,6 @@
 using System.Text.Json;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Candles;
+using MarketData.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketData.Infrastructure.Persistence.Repositories;

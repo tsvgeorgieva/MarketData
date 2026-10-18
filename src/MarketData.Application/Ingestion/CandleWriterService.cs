@@ -6,14 +6,13 @@ using Microsoft.Extensions.Options;
 namespace MarketData.Application.Ingestion;
 
 /// <summary>The only consumer of the queue: builds batches of Candles and saves them, retrying when the database fails.</summary>
-public sealed class CandleWriter(
+public sealed class CandleWriterService(
     CandleQueue candleQueue,
     ICandleRepository candleRepository,
     TimeProvider clock,
     IOptions<IngestionOptions> options,
-    ILogger<CandleWriter> logger)
+    ILogger<CandleWriterService> logger) : ICandleWriterService
 {
-    /// <summary>Runs until <paramref name="stoppingToken"/> is cancelled, then saves what is still queued, without retrying.</summary>
     public async Task RunAsync(CancellationToken stoppingToken)
     {
         try

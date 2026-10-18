@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using MarketData.Api.Admin;
+using MarketData.Api.Errors;
 using MarketData.Api.Ingestion;
 using MarketData.Application;
 using MarketData.Infrastructure;
@@ -23,6 +25,13 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddHealthChecks();
 
+builder.Services.AddControllers();
+
+// Every error is a problem-details document carrying the same trace id as the log lines of the request.
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+    context.ProblemDetails.Extensions["traceId"] = Activity.Current?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+
 // Hosted services start in this order and stop in reverse: the database is ready before anything runs,
 // and on shutdown the feed stops first so the writer can save what is still queued.
 builder.Services.AddHostedService<CandleWriterHostedService>();
@@ -31,6 +40,9 @@ builder.Services.AddHostedService<IngestionHostedService>();
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+app.UseExceptionHandler();
+app.UseStatusCodePages();
+app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 
 app.Run();

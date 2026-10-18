@@ -8,7 +8,7 @@ public sealed class IngestionService(
     IMonitoredSymbolRepository monitoredSymbolRepository,
     IBinanceStreamFactory binanceStreamFactory,
     CandleQueue candleQueue,
-    ILogger<IngestionService> logger)
+    ILogger<IngestionService> logger) : IIngestionService
 {
     public async Task RunAsync(CancellationToken stoppingToken)
     {
