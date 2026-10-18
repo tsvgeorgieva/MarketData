@@ -2,7 +2,7 @@
 
 A proposal for running MarketData on Azure with CI/CD. Nothing here is deployed. The cost research is tracked in [issue #12](https://github.com/tsvgeorgieva/MarketData/issues/12).
 
-## Architecture
+## 1. Azure components
 
 ```
 GitHub Actions ── build ──▶ Azure Container Registry
@@ -12,41 +12,43 @@ GitHub Actions ── build ──▶ Azure Container Registry
                         └─▶ Binance (outbound)
 ```
 
-| Component | Choice | Why |
-| --- | --- | --- |
-| Host | Container Apps, `minReplicas = maxReplicas = 1` | The repo already has a [Dockerfile](../Dockerfile). The app is a 24/7 WebSocket client, so it must never scale to zero, and a second replica would duplicate ingestion. The image tested locally and in CI is the one that runs in Azure, and every deploy is a revision that can be re-activated for rollback |
-| Database | Azure SQL, DTU S0 (about USD 14.5/month) | Constant ingestion keeps serverless awake, so it would cost about USD 209/month for no benefit |
-| Database login | Managed identity (Entra), no password | Nothing to store, leak or rotate |
-| Secrets | Key Vault references, pinned versions | Keeps secrets out of the pipeline, the image and the app configuration. An unpinned reference restarts the app on rotation and drops the Binance connection |
-| Registry | Azure Container Registry (Basic) | Native pull with the managed identity |
-| Infrastructure | Bicep in `infra/` | Native to Azure, no state file |
-| Migrations | `Database__MigrateOnStartup=true` | Safe with one replica and needs no extra job. Revisit if replicas go above one |
+| Component | Why |
+| --- | --- |
+| Container Apps environment and app, `minReplicas = maxReplicas = 1` | The repo already has a [Dockerfile](../Dockerfile), and the image tested locally and in CI is the one that runs in Azure. The app is a 24/7 WebSocket client, so it must never scale to zero, and a second replica would duplicate ingestion. Every deploy is a revision that can be re-activated for rollback. App Service would be cheaper (about USD 13 against 47/month) and also works |
+| Azure Container Registry (Basic) | Holds the images, one per commit. The app pulls with its managed identity, so there is no registry password |
+| Azure SQL Database, DTU S0 (about USD 14.5/month) | Constant ingestion keeps serverless awake, so serverless would cost about USD 209/month for no benefit |
+| User-assigned managed identity | One identity for registry pull, Key Vault read and database login. The database uses Entra authentication, so there is no password to store, leak or rotate |
+| Key Vault | Keeps secrets out of the pipeline, the image and the app configuration. References are pinned to a version, because an unpinned one restarts the app on rotation and drops the Binance connection |
+| Log Analytics workspace | Collects the console logs of the app. Needed to see why a revision failed |
 
-App Service would be cheaper (about USD 13 against 47/month) and also works.
+Migrations run at startup (`Database__MigrateOnStartup=true`). That is safe with one replica and needs no extra job. Revisit it if replicas ever go above one.
 
-## Set up once
+Health probes use `/health/live`, which does not touch the database, so a database outage does not restart the app.
 
-1. `az deployment group create -f infra/main.bicep` creates all the resources.
-2. Grant the app's managed identity access to the database (`CREATE USER ... FROM EXTERNAL PROVIDER`, `db_owner`, because the app runs its own migrations) and `Key Vault Secrets User` on the vault.
-3. Add a federated credential for `main` to a deployment identity (`Contributor` on the resource group, `AcrPush` on the registry). Store its IDs as GitHub repository variables.
+## 2. Infrastructure as code
 
-Connection string: `Server=<server>.database.windows.net;Database=MarketData;Authentication=Active Directory Default;User Id=<identity-client-id>`. Health probes use `/health/live`, which does not touch the database, so a database outage does not restart the app.
+All of the above is defined in **Bicep**, in `infra/`, and applied with `az deployment group create`.
 
-## Pipelines
+- **Why IaC at all:** the environment can be recreated from the repository, and a change to it is reviewed like code.
+- **Why Bicep:** it is native to Azure, has no state file to store or lock, and needs no tool beyond the Azure CLI.
+- **Deployed separately from the app:** a manual workflow applies `infra/`, so an application change cannot alter the environment.
 
-Two workflows, so a build can be repeated or promoted without rebuilding, and a rollback needs no build.
+After the first deployment, two things are done once by hand: grant the managed identity access to the database (`CREATE USER ... FROM EXTERNAL PROVIDER`, `db_owner`, because the app runs its own migrations), and add the secrets to Key Vault.
+
+## 3. CI/CD
+
+Two workflows on GitHub Actions. They are separate so a build can be reused without rebuilding, and a rollback needs no build.
 
 | | `build.yml` | `deploy.yml` |
 | --- | --- | --- |
 | Trigger | Pull request and push to `main` | Successful `build.yml` run on `main`, or manual with an image tag |
 | Does | `dotnet test`, then build the image. On `main` also push it as `marketdata:<commit SHA>` | Point the Container App at the given tag, then check `/health/live` |
-| Azure access | Only `AcrPush`, and only on `main` | `Contributor` on the resource group |
+| Azure access | `AcrPush`, and only on `main` | `Contributor` on the resource group |
 
 - **Tests gate the image.** Hosted Ubuntu runners have Docker, so the Testcontainers integration tests run unchanged.
 - **SHA tags, never `latest`.** Every revision maps to a commit. Rollback is running `deploy.yml` manually with an older tag.
-- **OIDC login.** The pipelines hold no Azure secret.
+- **OIDC login.** A federated credential for `main` means the pipelines hold no Azure secret.
 - **`production` environment** on `deploy.yml` lets the repository require a manual approval.
-- **Infrastructure** changes go through a separate manual workflow, so an app change cannot alter the environment.
 
 ## Known limits
 
