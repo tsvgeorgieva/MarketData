@@ -25,4 +25,19 @@ public class BinanceStreamTests
 
         Assert.Null(BinanceStream.ToClosedCandle(message));
     }
+
+    [Fact]
+    public void BuildRequest_Subscribe_NamesTheLowercaseOneMinuteStreams()
+    {
+        var json = BinanceStream.BuildRequest("SUBSCRIBE", [SymbolCode.Parse("XRPUSDT"), SymbolCode.Parse("ADAUSDT")], id: 7);
+
+        Assert.Equal("""{"method":"SUBSCRIBE","params":["xrpusdt@kline_1m","adausdt@kline_1m"],"id":7}""", json);
+    }
+
+    [Theory]
+    [InlineData("""{"result":null,"id":7}""", true)]
+    [InlineData("""{"code":2,"msg":"Invalid request"}""", false)]
+    [InlineData("not json", false)]
+    public void IsReplyToRequest_Message_IsRecognisedOnlyForABinanceReply(string message, bool expected) =>
+        Assert.Equal(expected, BinanceStream.IsReplyToRequest(System.Text.Encoding.UTF8.GetBytes(message)));
 }

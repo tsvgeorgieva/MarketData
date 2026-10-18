@@ -11,7 +11,7 @@ internal sealed class BinanceStreamFactory(IOptions<BinanceOptions> options, ILo
     public async Task<IBinanceStream> ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
         // Stream names use lowercase symbols: one combined connection carries every kline_1m stream.
-        var streams = string.Join('/', symbols.Select(symbol => $"{symbol.Value.ToLowerInvariant()}@kline_1m"));
+        var streams = string.Join('/', symbols.Select(BinanceStream.StreamName));
         var uri = new Uri($"{options.Value.WebSocketUrl}/stream?streams={streams}");
 
         var socket = new ClientWebSocket();

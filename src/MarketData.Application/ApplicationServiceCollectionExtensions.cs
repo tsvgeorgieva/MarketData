@@ -21,6 +21,7 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddSingleton<CandleQueue>();
+        services.AddSingleton<SymbolChanges>();
         services.AddSingleton<BackfillService>();
         services.AddSingleton<ICandleWriterService, CandleWriterService>();
         services.AddSingleton<IIngestionService, IngestionService>();

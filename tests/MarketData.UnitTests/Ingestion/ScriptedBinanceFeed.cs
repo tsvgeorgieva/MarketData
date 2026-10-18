@@ -34,5 +34,9 @@ internal sealed class ScriptedBinanceFeed(IEnumerable<Candle> candles, Exception
         }
     }
 
+    public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Task.CompletedTask;
+
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

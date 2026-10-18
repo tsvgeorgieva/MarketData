@@ -14,6 +14,7 @@ public sealed class FakeBinance : IBinanceStreamFactory, IBinanceHistory
 {
     private readonly Channel<Candle> _candles = Channel.CreateUnbounded<Candle>();
     private readonly List<Candle> _history = [];
+    private readonly List<string> _calls = [];
     private readonly Lock _lock = new();
 
     private readonly TaskCompletionSource<IReadOnlyCollection<SymbolCode>> _connected =
@@ -39,7 +40,19 @@ public sealed class FakeBinance : IBinanceStreamFactory, IBinanceHistory
     public Task<IBinanceStream> ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
         _connected.TrySetResult(symbols);
-        return Task.FromResult<IBinanceStream>(new Stream(_candles.Reader));
+        return Task.FromResult<IBinanceStream>(new Stream(_candles.Reader, this));
+    }
+
+    /// <summary>Each subscribe or unsubscribe the host made on the open connection, like <c>SUBSCRIBE XRPUSDT</c>, in order.</summary>
+    public IReadOnlyList<string> Calls
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _calls];
+            }
+        }
     }
 
     public Task<IReadOnlyList<Candle>> GetClosedCandlesAsync(SymbolCode symbol, DateTimeOffset from, DateTimeOffset through, CancellationToken cancellationToken)
@@ -56,8 +69,28 @@ public sealed class FakeBinance : IBinanceStreamFactory, IBinanceHistory
         }
     }
 
-    private sealed class Stream(ChannelReader<Candle> candles) : IBinanceStream
+    private void Record(string method, IReadOnlyCollection<SymbolCode> symbols)
     {
+        lock (_lock)
+        {
+            _calls.Add($"{method} {string.Join(',', symbols.Select(symbol => symbol.Value))}");
+        }
+    }
+
+    private sealed class Stream(ChannelReader<Candle> candles, FakeBinance owner) : IBinanceStream
+    {
+        public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+        {
+            owner.Record("SUBSCRIBE", symbols);
+            return Task.CompletedTask;
+        }
+
+        public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+        {
+            owner.Record("UNSUBSCRIBE", symbols);
+            return Task.CompletedTask;
+        }
+
         public IAsyncEnumerable<Candle> ReadClosedAsync(CancellationToken cancellationToken) =>
             candles.ReadAllAsync(cancellationToken);
 
