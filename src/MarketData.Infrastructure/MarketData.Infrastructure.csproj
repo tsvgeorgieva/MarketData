@@ -15,4 +15,8 @@
   <PropertyGroup>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="MarketData.UnitTests" />
+  </ItemGroup>
+
 </Project>

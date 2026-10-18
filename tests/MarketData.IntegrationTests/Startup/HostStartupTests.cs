@@ -20,29 +20,28 @@ public class HostStartupTests(SqlServerFixture sql)
     }
 
     [Fact]
-    public async Task Startup_MigrationOn_AppliesMigrationsToNewDatabase()
+    public async Task Startup_MigrationOn_CreatesSchemaInNewDatabase()
     {
         var connectionString = sql.NewDatabaseConnectionString();
         await using var factory = new ApiFactory(connectionString, migrateOnStartup: true);
         using var client = factory.CreateClient();
 
-        var applied = await ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM __EFMigrationsHistory");
+        var tables = await TestDatabase.ScalarAsync<int>(
+            connectionString,
+            "SELECT COUNT(*) FROM sys.tables WHERE name IN ('Candles', 'MonitoredSymbols')");
 
-        Assert.Equal(1, applied);
+        Assert.Equal(2, tables);
     }
 
     [Fact]
-    public async Task Startup_MigrationOff_LeavesDatabaseUncreated()
+    public async Task Startup_MigrationOffAndSchemaMissing_StopsHost()
     {
         var connectionString = sql.NewDatabaseConnectionString();
+        var catalog = TestDatabase.CatalogOf(connectionString);
+        await TestDatabase.ExecuteAsync(TestDatabase.WithCatalog(connectionString, "master"), $"CREATE DATABASE [{catalog}]");
         await using var factory = new ApiFactory(connectionString, migrateOnStartup: false);
-        using var client = factory.CreateClient();
-        var databaseName = new SqlConnectionStringBuilder(connectionString).InitialCatalog;
-        var master = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "master" }.ConnectionString;
 
-        var exists = await ScalarAsync<int>(master, $"SELECT COUNT(*) FROM sys.databases WHERE name = '{databaseName}'");
-
-        Assert.Equal(0, exists);
+        await Assert.ThrowsAsync<SqlException>(() => Task.Run(() => factory.CreateClient()));
     }
 
     [Fact]
@@ -76,13 +75,5 @@ public class HostStartupTests(SqlServerFixture sql)
             message.Contains(connectionString, StringComparison.Ordinal));
 
         Assert.Empty(leaked);
-    }
-
-    private static async Task<T> ScalarAsync<T>(string connectionString, string sql)
-    {
-        await using var connection = new SqlConnection(connectionString);
-        await connection.OpenAsync(TestContext.Current.CancellationToken);
-        await using var command = new SqlCommand(sql, connection);
-        return (T)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
     }
 }

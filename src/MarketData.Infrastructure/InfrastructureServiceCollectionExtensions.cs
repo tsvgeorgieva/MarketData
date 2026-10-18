@@ -1,3 +1,6 @@
+using MarketData.Application.Ingestion;
+using MarketData.Application.Symbols;
+using MarketData.Infrastructure.Binance;
 using MarketData.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,8 +20,17 @@ public static class InfrastructureServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddDbContext<MarketDataDbContext>((provider, builder) =>
+        services.AddOptions<BinanceOptions>()
+            .BindConfiguration(BinanceOptions.SectionName)
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddDbContextFactory<MarketDataDbContext>((provider, builder) =>
             builder.UseSqlServer(provider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString));
+
+        services.AddSingleton<ICandleStore, CandleStore>();
+        services.AddSingleton<IMonitoredSymbolRepository, MonitoredSymbolRepository>();
+        services.AddSingleton<IBinanceStreamFactory, BinanceStreamFactory>();
 
         services.AddHostedService<DatabaseInitializer>();
         return services;

@@ -20,6 +20,10 @@ dotnet_sort_system_directives_first = true
 
 # The LoggerMessage source generator adds ceremony that this small service does not need.
 dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+
+# IBinanceStream is a feed of market updates, not a System.IO.Stream.
+dotnet_diagnostic.CA1711.severity = none
 
 [**/Persistence/Migrations/*.cs]
 generated_code = true
