@@ -258,6 +258,52 @@ public class AdminSymbolsTests(SqlServerFixture sql)
             (overCap.StatusCode, monitored.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
     }
 
+    [Fact]
+    public async Task Add_NewSymbol_BackfillsItsLast24HoursOfClosedCandles()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        factory.Binance.AddHistory(Candle("XRPUSDT", minute: -60, close: 2.5m));
+        factory.Binance.AddHistory(Candle("XRPUSDT", minute: -25 * 60, close: 9m));
+
+        await client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken);
+
+        await Poll.UntilAsync(
+            async () => await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM Candles WHERE Symbol = 'XRPUSDT'") == 1,
+            "the backfilled candle to be stored");
+        Assert.Equal(2.5m, await TestDatabase.ScalarAsync<decimal>(connectionString, "SELECT [Close] FROM Candles WHERE Symbol = 'XRPUSDT'"));
+    }
+
+    [Fact]
+    public async Task Add_RemovedSymbol_BackfillsTheMinutesItMissed()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        await client.DeleteAsync("/api/admin/symbols/BTCUSDT", TestContext.Current.CancellationToken);
+        factory.Binance.AddHistory(Candle("BTCUSDT", minute: -30, close: 100m));
+        factory.Binance.AddHistory(Candle("BTCUSDT", minute: -29, close: 101m));
+
+        await client.PutAsync("/api/admin/symbols/BTCUSDT", content: null, TestContext.Current.CancellationToken);
+
+        await Poll.UntilAsync(
+            async () => await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM Candles WHERE Symbol = 'BTCUSDT'") == 2,
+            "the missed candles to be stored");
+    }
+
+    [Fact]
+    public async Task Add_BinanceHistoryUnreachable_StillAddsTheSymbolWithoutBackfill()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        factory.Binance.HistoryUnreachable = true;
+
+        var response = await client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            (HttpStatusCode.Created, 1),
+            (response.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
+    }
+
     private ApiFactory NewFactory(out string connectionString)
     {
         connectionString = sql.NewDatabaseConnectionString();

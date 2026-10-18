@@ -21,6 +21,7 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateOnStart();
 
         services.AddSingleton<CandleQueue>();
+        services.AddSingleton<BackfillService>();
         services.AddSingleton<ICandleWriterService, CandleWriterService>();
         services.AddSingleton<IIngestionService, IngestionService>();
         services.AddSingleton<IPriceAnalyticsService, PriceAnalyticsService>();

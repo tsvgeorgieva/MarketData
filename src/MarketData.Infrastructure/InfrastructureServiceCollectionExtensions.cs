@@ -33,6 +33,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<ICandlePriceAnalyticsRepository, CandlePriceAnalyticsRepository>();
         services.AddSingleton<IBinanceStreamFactory, BinanceStreamFactory>();
         services.AddSingleton<IBinanceSymbolCatalog, BinanceSymbolCatalog>();
+        services.AddSingleton<IBinanceHistory, BinanceHistory>();
 
         services.AddSingleton<DatabaseSeeder>();
         services.AddHostedService<DatabaseInitializer>();
