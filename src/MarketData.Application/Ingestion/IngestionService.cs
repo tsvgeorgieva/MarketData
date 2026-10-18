@@ -27,7 +27,7 @@ public sealed class IngestionService(
 
     private async Task CollectAsync(CancellationToken stoppingToken)
     {
-        var monitored = await monitoredSymbolRepository.GetAllAsync(stoppingToken);
+        var monitored = (await monitoredSymbolRepository.GetAllAsync(stoppingToken)).Select(symbol => symbol.Symbol).ToList();
         if (monitored.Count == 0)
         {
             logger.LogWarning("There are no Monitored Symbols; nothing is collected");

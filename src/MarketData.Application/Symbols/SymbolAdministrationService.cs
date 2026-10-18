@@ -7,7 +7,7 @@ namespace MarketData.Application.Symbols;
 public sealed class SymbolAdministrationService(IMonitoredSymbolRepository monitoredSymbolRepository, TimeProvider clock) : ISymbolAdministrationService
 {
     public Task<IReadOnlyList<MonitoredSymbol>> ListAsync(CancellationToken cancellationToken) =>
-        monitoredSymbolRepository.ListAsync(cancellationToken);
+        monitoredSymbolRepository.GetAllAsync(cancellationToken);
 
     public Task RemoveAsync(string symbolText, CancellationToken cancellationToken)
     {
