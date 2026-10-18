@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MarketData.Api.Contracts/MarketData.Api.Contracts.csproj" />
+    <Project Path="src/MarketData.Api/MarketData.Api.csproj" />
+    <Project Path="src/MarketData.Application/MarketData.Application.csproj" />
+    <Project Path="src/MarketData.Client/MarketData.Client.csproj" />
+    <Project Path="src/MarketData.Domain/MarketData.Domain.csproj" />
+    <Project Path="src/MarketData.Infrastructure/MarketData.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MarketData.IntegrationTests/MarketData.IntegrationTests.csproj" />
+    <Project Path="tests/MarketData.UnitTests/MarketData.UnitTests.csproj" />
+  </Folder>
+</Solution>

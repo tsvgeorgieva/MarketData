@@ -41,11 +41,11 @@ The group of consecutive Candles that make up one data point of a given Period, 
 _Avoid_: Window, bar
 
 **Reference Instant**:
-The moment a moving average is calculated as of: the requested start/reference time, or now when none is given. The Bucket containing it is the newest data point, and a Candle counts only if it had closed by then.
+The moment a moving average is calculated as of: the requested end time (the `e` parameter), or now when none is given. The newest data point is the Bucket containing the last minute that had closed by then, and a Candle counts only if it had closed by then.
 _Avoid_: Start time, as-of date
 
 **In-progress Bucket**:
-The Bucket that contains the Reference Instant when its Period has not yet fully elapsed; its value is the Price of the latest closed Candle so far.
+The newest Bucket of a moving average when its Period has not yet fully elapsed; its value is the Price of the latest closed Candle so far. It never exists for a `1m` Period, where each Bucket is one closed Candle.
 _Avoid_: Open bucket, partial bucket
 
 **24h Average Price**:
@@ -53,5 +53,5 @@ The simple arithmetic mean of the Prices of all Candles in the last 24 hours, us
 _Avoid_: Daily average, 24h ticker price
 
 **Simple Moving Average**:
-The arithmetic mean of the Prices of the `n` consecutive Buckets of a given Period that end with the Bucket containing the Reference Instant, using only the Buckets that exist. It is partial when fewer than `n` exist.
+The arithmetic mean of the Prices of the `n` consecutive Buckets of a given Period that end with the Bucket containing the last minute closed by the Reference Instant, using only the Buckets that exist. It is partial when fewer than `n` exist.
 _Avoid_: SMA line, rolling average

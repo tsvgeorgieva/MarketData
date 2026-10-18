@@ -1,0 +1,29 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{csproj,props,slnx,json,yml,yaml}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_style_qualification_for_field = false:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_sort_system_directives_first = true
+
+# The LoggerMessage source generator adds ceremony that this small service does not need.
+dotnet_diagnostic.CA1848.severity = none
+
+[**/Persistence/Migrations/*.cs]
+generated_code = true
+
+# Test names follow Method_Scenario_ExpectedResult.
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
