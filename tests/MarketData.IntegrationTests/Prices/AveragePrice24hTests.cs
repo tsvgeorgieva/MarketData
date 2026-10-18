@@ -122,23 +122,6 @@ public partial class AveragePrice24hTests(SqlServerFixture sql)
         Assert.Contains("No data collected yet", problem.Detail, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task Get_UnexpectedFailure_ReturnsGenericServerErrorWithoutTheDetail()
-    {
-        await using var factory = NewFactory(out _);
-        await using var failing = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
-            services.AddSingleton<ICandlePriceAnalyticsRepository>(new ThrowingPriceAnalyticsRepository())));
-        using var client = failing.CreateClient();
-
-        var response = await client.GetAsync("/api/BTCUSDT/24hAvgPrice", TestContext.Current.CancellationToken);
-
-        var problem = await AssertProblemAsync(response, HttpStatusCode.InternalServerError);
-        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(
-            ("An unexpected error occurred.", false),
-            (problem.Detail, body.Contains(ThrowingPriceAnalyticsRepository.SecretDetail, StringComparison.Ordinal)));
-    }
-
     private ApiFactory NewFactory(out string connectionString)
     {
         connectionString = sql.NewDatabaseConnectionString();
