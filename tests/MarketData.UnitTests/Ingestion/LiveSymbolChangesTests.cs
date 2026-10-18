@@ -1,4 +1,5 @@
 using MarketData.Application.Ingestion;
+using MarketData.Application.Symbols;
 using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -11,7 +12,7 @@ public sealed class LiveSymbolChangesTests : IAsyncDisposable
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
     private readonly OpenBinanceFeed _feed = new();
-    private readonly SymbolChanges _changes = new();
+    private readonly SymbolChangesQueue _changes = new(Options.Create(new IngestionOptions()), NullLogger<SymbolChangesQueue>.Instance);
     private readonly CandleQueue _queue = new(Options.Create(new IngestionOptions { QueueCapacity = 100 }), NullLogger<CandleQueue>.Instance);
     private readonly CancellationTokenSource _stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
     private Task _running = Task.CompletedTask;
@@ -46,33 +47,6 @@ public sealed class LiveSymbolChangesTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task SymbolChange_ForASymbolAlreadyInThatState_DoesNothingOnTheConnection()
-    {
-        Start(new FakeMonitoredSymbols("BTCUSDT"));
-        await _feed.Connected;
-
-        _changes.Publish(new SymbolChange(SymbolCode.Parse("BTCUSDT"), Added: true));
-        _changes.Publish(new SymbolChange(SymbolCode.Parse("XRPUSDT"), Added: false));
-        _changes.Publish(new SymbolChange(SymbolCode.Parse("ETHUSDT"), Added: true));
-
-        // The last change is the only one that reaches Binance, which also shows the first two were handled before it.
-        await UntilAsync(() => _feed.Calls.SequenceEqual(["SUBSCRIBE ETHUSDT"]));
-    }
-
-    [Fact]
-    public async Task NoMonitoredSymbols_FirstSymbolAdded_ConnectsWithIt()
-    {
-        var symbols = new FakeMonitoredSymbols();
-        Start(symbols);
-
-        symbols.Add("XRPUSDT");
-        _changes.Publish(new SymbolChange(SymbolCode.Parse("XRPUSDT"), Added: true));
-
-        var connectedWith = await _feed.Connected.WaitAsync(Timeout, TestContext.Current.CancellationToken);
-        Assert.Equal(["XRPUSDT"], connectedWith.Select(symbol => symbol.Value));
-    }
-
-    [Fact]
     public async Task Candles_OfAnAddedAndARemovedSymbol_OnlyTheAddedOnesAreQueued()
     {
         var symbols = new FakeMonitoredSymbols("BTCUSDT", "ETHUSDT");
@@ -100,8 +74,9 @@ public sealed class LiveSymbolChangesTests : IAsyncDisposable
 
     private void Start(FakeMonitoredSymbols symbols)
     {
-        var service = new IngestionService(symbols, _feed, _queue, _changes, NullLogger<IngestionService>.Instance);
-        _running = service.RunAsync(_stop.Token);
+        var ingestion = new IngestionService(symbols, _feed, _queue, NullLogger<IngestionService>.Instance);
+        var handler = new SymbolChangeEventHandler(_changes, _feed, NullLogger<SymbolChangeEventHandler>.Instance);
+        _running = Task.WhenAll(ingestion.RunAsync(_stop.Token), handler.RunAsync(_stop.Token));
     }
 
     private static async Task UntilAsync(Func<bool> condition)

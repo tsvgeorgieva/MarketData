@@ -38,7 +38,7 @@ public sealed class ApiFactory(
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<TimeProvider>(Clock);
-            services.AddSingleton<IBinanceStreamFactory>(Binance);
+            services.AddSingleton<IBinanceStream>(Binance);
             services.AddSingleton<IBinanceHistory>(Binance);
             services.AddSingleton<IBinanceSymbolCatalog>(Catalog);
             services.AddSingleton<ILogEventSink>(Logs);

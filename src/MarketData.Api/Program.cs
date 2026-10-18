@@ -42,6 +42,7 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 // and on shutdown the feed stops first so the writer can save what is still queued.
 builder.Services.AddHostedService<CandleWriterHostedService>();
 builder.Services.AddHostedService<IngestionHostedService>();
+builder.Services.AddHostedService<SymbolChangeHostedService>();
 
 var app = builder.Build();
 

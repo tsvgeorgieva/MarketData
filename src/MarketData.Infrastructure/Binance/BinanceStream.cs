@@ -8,20 +8,56 @@ using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
 using MarketData.Infrastructure.Binance.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MarketData.Infrastructure.Binance;
 
-internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStream> logger) : IBinanceStream
+/// <summary>
+/// The one Binance WebSocket connection of the service. It remembers which Symbols should be subscribed, so a Symbol added or removed
+/// before the connection opens is not lost, and it sends subscribe and unsubscribe requests once the connection is open.
+/// </summary>
+internal sealed class BinanceStream(IOptions<BinanceOptions> options, ILogger<BinanceStream> logger) : IBinanceStream
 {
     private const int FrameSize = 16 * 1024;
 
-    // A WebSocket allows one send at a time; Subscribe and Unsubscribe calls wait their turn.
-    private readonly SemaphoreSlim _sendLock = new(1, 1);
+    // A WebSocket allows one send at a time, and the subscribed set changes together with what is sent.
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly HashSet<SymbolCode> _subscribed = [];
+    private ClientWebSocket? _socket;
     private int _requestId;
+
+    public async Task ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            _subscribed.UnionWith(symbols);
+            var uri = new Uri($"{options.Value.WebSocketUrl}/stream?streams={string.Join('/', _subscribed.Select(StreamName))}");
+
+            var socket = new ClientWebSocket();
+            try
+            {
+                await socket.ConnectAsync(uri, cancellationToken);
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
+
+            _socket?.Dispose();
+            _socket = socket;
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     public async IAsyncEnumerable<Candle> ReadClosedAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var message in ReadMessagesAsync(cancellationToken))
+        var socket = _socket ?? throw new InvalidOperationException("The Binance stream is not connected.");
+        await foreach (var message in ReadMessagesAsync(socket, cancellationToken))
         {
             if (ToClosedCandle(message) is { } candle)
             {
@@ -30,15 +66,37 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
         }
     }
 
-    public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) =>
-        SendAsync("SUBSCRIBE", symbols, cancellationToken);
+    public async Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var added = symbols.Where(_subscribed.Add).ToList();
+            await SendIfOpenAsync("SUBSCRIBE", added, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
-    public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) =>
-        SendAsync("UNSUBSCRIBE", symbols, cancellationToken);
+    public async Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var removed = symbols.Where(_subscribed.Remove).ToList();
+            await SendIfOpenAsync("UNSUBSCRIBE", removed, cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
-        if (socket.State == WebSocketState.Open)
+        if (_socket is { State: WebSocketState.Open } socket)
         {
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
             try
@@ -51,8 +109,8 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
             }
         }
 
-        socket.Dispose();
-        _sendLock.Dispose();
+        _socket?.Dispose();
+        _gate.Dispose();
     }
 
     /// <summary>The request that adds or removes the one-minute kline streams of the Symbols on an open connection.</summary>
@@ -97,21 +155,19 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
             kline.Volume);
     }
 
-    private async Task SendAsync(string method, IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    /// <summary>Sends the request when the connection is open; otherwise the change is only remembered and applies when the connection opens.</summary>
+    private async Task SendIfOpenAsync(string method, List<SymbolCode> symbols, CancellationToken cancellationToken)
     {
-        var request = Encoding.UTF8.GetBytes(BuildRequest(method, symbols, Interlocked.Increment(ref _requestId)));
-        await _sendLock.WaitAsync(cancellationToken);
-        try
+        if (symbols.Count == 0 || _socket is not { State: WebSocketState.Open } socket)
         {
-            await socket.SendAsync(request, WebSocketMessageType.Text, endOfMessage: true, cancellationToken);
+            return;
         }
-        finally
-        {
-            _sendLock.Release();
-        }
+
+        var request = Encoding.UTF8.GetBytes(BuildRequest(method, symbols, ++_requestId));
+        await socket.SendAsync(request, WebSocketMessageType.Text, endOfMessage: true, cancellationToken);
     }
 
-    private async IAsyncEnumerable<KlineMessage> ReadMessagesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<KlineMessage> ReadMessagesAsync(ClientWebSocket socket, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var frame = new byte[FrameSize];
         var buffer = new ArrayBufferWriter<byte>();

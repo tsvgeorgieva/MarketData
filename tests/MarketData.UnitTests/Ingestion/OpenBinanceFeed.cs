@@ -6,7 +6,7 @@ using MarketData.Domain.Symbols;
 namespace MarketData.UnitTests.Ingestion;
 
 /// <summary>A Binance connection that stays open until the test ends it: delivers the Candles the test publishes and records every subscribe and unsubscribe.</summary>
-internal sealed class OpenBinanceFeed : IBinanceStreamFactory, IBinanceStream
+internal sealed class OpenBinanceFeed : IBinanceStream
 {
     private readonly Channel<Candle> _candles = Channel.CreateUnbounded<Candle>();
     private readonly List<string> _calls = [];
@@ -32,10 +32,10 @@ internal sealed class OpenBinanceFeed : IBinanceStreamFactory, IBinanceStream
 
     public void Publish(Candle candle) => _candles.Writer.TryWrite(candle);
 
-    public Task<IBinanceStream> ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    public Task ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
         _connected.TrySetResult(symbols);
-        return Task.FromResult<IBinanceStream>(this);
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<Candle> ReadClosedAsync(CancellationToken cancellationToken) => _candles.Reader.ReadAllAsync(cancellationToken);

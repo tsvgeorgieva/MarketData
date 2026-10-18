@@ -45,7 +45,7 @@ public sealed class IngestionServiceTests : IAsyncDisposable
     {
         var feed = new ScriptedBinanceFeed([]);
 
-        await RunAsync(feed, new FakeMonitoredSymbols(), noSymbols: true);
+        await RunAsync(feed, new FakeMonitoredSymbols());
 
         Assert.Equal(0, feed.Connects);
     }
@@ -87,7 +87,7 @@ public sealed class IngestionServiceTests : IAsyncDisposable
         Assert.Equal([TestCandles.At(0)], _repository.Stored);
     }
 
-    private async Task RunAsync(ScriptedBinanceFeed feed, FakeMonitoredSymbols symbols, int queueCapacity = 100, bool noSymbols = false)
+    private async Task RunAsync(ScriptedBinanceFeed feed, FakeMonitoredSymbols symbols, int queueCapacity = 100)
     {
         var options = Options.Create(new IngestionOptions
         {
@@ -97,18 +97,10 @@ public sealed class IngestionServiceTests : IAsyncDisposable
         });
         var queue = new CandleQueue(options, NullLogger<CandleQueue>.Instance);
         var writer = new CandleWriterService(queue, _repository, TimeProvider.System, options, NullLogger<CandleWriterService>.Instance);
-        var service = new IngestionService(symbols, feed, queue, new SymbolChanges(), NullLogger<IngestionService>.Instance);
+        var service = new IngestionService(symbols, feed, queue, NullLogger<IngestionService>.Instance);
 
         _writing = writer.RunAsync(_writerStop.Token);
-
-        // With no Monitored Symbols the service waits for one to be added, so a short run is cut off instead of waited for.
-        using var cutOff = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        if (noSymbols)
-        {
-            cutOff.CancelAfter(TimeSpan.FromMilliseconds(200));
-        }
-
-        await service.RunAsync(cutOff.Token).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await service.RunAsync(TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
     }
 
     private async Task StopWriterAsync()
