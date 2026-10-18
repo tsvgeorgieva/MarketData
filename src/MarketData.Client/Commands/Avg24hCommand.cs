@@ -21,11 +21,4 @@ internal sealed class Avg24hCommand(string symbol) : ICommand
         return string.Create(CultureInfo.InvariantCulture,
             $"{average.Symbol} 24h average price: {average.Average:0.########}\nwindow: {average.From:u} to {average.To:u}\ndata points: {average.DataPoints}\n");
     }
-
-    internal sealed class Factory : ICommandFactory
-    {
-        public string Name => "avg24h";
-
-        public ICommand Create(CommandArguments arguments) => new Avg24hCommand(arguments.Symbol);
-    }
 }

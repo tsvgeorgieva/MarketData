@@ -16,7 +16,7 @@ public static class ConsoleClient
         string[] args, TextWriter output, TextWriter error, Func<string, string?> getEnvironmentVariable,
         HttpMessageHandler? handler, CancellationToken cancellationToken)
     {
-        var parser = new CommandLineParser([new Avg24hCommand.Factory(), new SmaCommand.Factory()]);
+        var parser = new CommandLineParser([new Avg24hCommandFactory(), new SmaCommandFactory()]);
         try
         {
             var line = parser.Parse(args);

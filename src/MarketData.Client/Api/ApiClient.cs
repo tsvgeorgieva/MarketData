@@ -30,5 +30,9 @@ internal sealed class ApiClient(HttpClient http) : IApiClient
         {
             throw new ServerUnreachableException(http.BaseAddress!, exception);
         }
+        catch (TaskCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new ServerUnreachableException(http.BaseAddress!, exception);
+        }
     }
 }

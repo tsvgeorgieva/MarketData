@@ -71,7 +71,7 @@ public class ConsoleClientTests(SqlServerFixture sql)
         await using var factory = NewFactory();
         await StoreAsync(factory, At(11, 59, 100m));
 
-        var run = await RunAsync(factory, name => name == "MARKETDATA_URL" ? "http://localhost" : null, "avg24h", "BTCUSDT");
+        var run = await RunAsync(factory, name => name == ConsoleClient.UrlVariable ? "http://localhost" : null, "avg24h", "BTCUSDT");
 
         Assert.Equal(0, run.ExitCode);
     }

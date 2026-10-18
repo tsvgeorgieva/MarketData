@@ -28,12 +28,4 @@ internal sealed class SmaCommand(string symbol, string n, string p, string? e) :
         return string.Create(CultureInfo.InvariantCulture,
             $"{average.Symbol} simple moving average over {average.Requested} x {average.Period}: {average.Average:0.########}\nwindow: {average.From:u} to {average.To:u}\ndata points: {average.DataPoints}{inProgress}\n");
     }
-
-    internal sealed class Factory : ICommandFactory
-    {
-        public string Name => "sma";
-
-        public ICommand Create(CommandArguments arguments) =>
-            new SmaCommand(arguments.Symbol, arguments.Require("-n"), arguments.Require("-p"), arguments.Take("-e"));
-    }
 }
