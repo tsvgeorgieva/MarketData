@@ -1,3 +1,4 @@
+using MarketData.Application.Ingestion;
 using MarketData.Domain.Exceptions;
 using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
@@ -8,6 +9,7 @@ namespace MarketData.Application.Symbols;
 public sealed class SymbolAdministrationService(
     IMonitoredSymbolRepository monitoredSymbolRepository,
     IBinanceSymbolCatalog binanceSymbolCatalog,
+    BackfillService backfillService,
     IOptions<SymbolsOptions> options,
     TimeProvider clock) : ISymbolAdministrationService
 {
@@ -33,7 +35,10 @@ public sealed class SymbolAdministrationService(
             throw new UnprocessableException($"{symbol} is not a symbol that Binance is trading.");
         }
 
-        return (await monitoredSymbolRepository.AddAsync(symbol, clock.GetUtcNow(), cancellationToken), true);
+        var added = await monitoredSymbolRepository.AddAsync(symbol, clock.GetUtcNow(), cancellationToken);
+        // The symbol is saved, so a client that disconnects now must not cancel its backfill.
+        await backfillService.BackfillAsync(symbol, CancellationToken.None);
+        return (added, true);
     }
 
     public Task RemoveAsync(string symbolText, CancellationToken cancellationToken) =>

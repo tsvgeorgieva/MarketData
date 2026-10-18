@@ -39,6 +39,7 @@ public sealed class ApiFactory(
         {
             services.AddSingleton<TimeProvider>(Clock);
             services.AddSingleton<IBinanceStreamFactory>(Binance);
+            services.AddSingleton<IBinanceHistory>(Binance);
             services.AddSingleton<IBinanceSymbolCatalog>(Catalog);
             services.AddSingleton<ILogEventSink>(Logs);
         });
