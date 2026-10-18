@@ -1,4 +1,5 @@
 using MarketData.Application.Symbols;
+using MarketData.Application.Symbols.Interfaces;
 
 namespace MarketData.Api.Ingestion;
 

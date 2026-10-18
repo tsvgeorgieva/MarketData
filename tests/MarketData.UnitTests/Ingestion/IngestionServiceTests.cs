@@ -85,7 +85,7 @@ public sealed class IngestionServiceTests : IAsyncDisposable
             MaxBatchSize = 10,
             WriterRetryDelay = TimeSpan.FromMilliseconds(1),
         });
-        var queue = new CandleQueue(options, NullLogger<CandleQueue>.Instance);
+        var queue = new CandleIngestionQueue(options, NullLogger<CandleIngestionQueue>.Instance);
         var writer = new CandleWriterService(queue, _repository, TimeProvider.System, options, NullLogger<CandleWriterService>.Instance);
         var service = new IngestionService(symbols, feed, queue, NullLogger<IngestionService>.Instance);
 

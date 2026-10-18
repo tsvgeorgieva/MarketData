@@ -1,7 +1,8 @@
 using MarketData.Application.Ingestion;
 using MarketData.Domain.Exceptions;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
+using MarketData.Application.Symbols.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace MarketData.Application.Symbols;

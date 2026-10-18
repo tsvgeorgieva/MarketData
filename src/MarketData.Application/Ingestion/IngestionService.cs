@@ -1,4 +1,5 @@
 using MarketData.Domain.Interfaces;
+using MarketData.Application.Ingestion.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.Application.Ingestion;
@@ -7,7 +8,7 @@ namespace MarketData.Application.Ingestion;
 public sealed class IngestionService(
     IMonitoredSymbolRepository monitoredSymbolRepository,
     IBinanceStream binanceStream,
-    CandleQueue candleQueue,
+    CandleIngestionQueue candleIngestionQueue,
     ILogger<IngestionService> logger) : IIngestionService
 {
     public async Task RunAsync(CancellationToken stoppingToken)
@@ -36,7 +37,7 @@ public sealed class IngestionService(
             // The open stream can still carry a Symbol removed after it was subscribed; its Candles are not collected.
             if (await monitoredSymbolRepository.ExistsAsync(candle.Symbol, stoppingToken))
             {
-                candleQueue.Enqueue(candle);
+                candleIngestionQueue.Enqueue(candle);
             }
         }
 

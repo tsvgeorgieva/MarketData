@@ -1,8 +1,11 @@
 using MarketData.Application.Ingestion;
+using MarketData.Application.Ingestion.Interfaces;
+using MarketData.Application.Prices.Interfaces;
 using MarketData.Application.Prices;
-using MarketData.Application.Symbols;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
+using MarketData.Application.Symbols.Interfaces;
+using MarketData.Application.Symbols;
 
 namespace MarketData.Application;
 
@@ -20,7 +23,7 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
-        services.AddSingleton<CandleQueue>();
+        services.AddSingleton<CandleIngestionQueue>();
         services.AddSingleton<SymbolChangesQueue>();
         services.AddSingleton<ISymbolChangeEventHandler, SymbolChangeEventHandler>();
         services.AddSingleton<BackfillService>();

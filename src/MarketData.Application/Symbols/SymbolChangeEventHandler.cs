@@ -1,6 +1,7 @@
 using MarketData.Domain.Interfaces;
-using MarketData.Domain.Symbols;
+using MarketData.Application.Symbols.Interfaces;
 using Microsoft.Extensions.Logging;
+using MarketData.Domain.Symbols;
 
 namespace MarketData.Application.Symbols;
 

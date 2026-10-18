@@ -1,4 +1,4 @@
-namespace MarketData.Application.Ingestion;
+namespace MarketData.Application.Ingestion.Interfaces;
 
 public interface IIngestionService
 {

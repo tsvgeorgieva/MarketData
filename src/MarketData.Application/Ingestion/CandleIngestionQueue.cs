@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
-using MarketData.Domain.Candles;
 using Microsoft.Extensions.Logging;
+using MarketData.Domain.Candles;
 using Microsoft.Extensions.Options;
 
 namespace MarketData.Application.Ingestion;
@@ -10,11 +10,11 @@ namespace MarketData.Application.Ingestion;
 /// Holds closed Candles between the Binance feed and the database writer, so a slow database never makes the feed wait.
 /// Its default size covers a 24-hour database outage; beyond that the oldest Candle is dropped and a later Backfill restores it.
 /// </summary>
-public sealed class CandleQueue
+public sealed class CandleIngestionQueue
 {
     private readonly Channel<Candle> _candles;
 
-    public CandleQueue(IOptions<IngestionOptions> options, ILogger<CandleQueue> logger)
+    public CandleIngestionQueue(IOptions<IngestionOptions> options, ILogger<CandleIngestionQueue> logger)
     {
         _candles = Channel.CreateBounded<Candle>(
             new BoundedChannelOptions(options.Value.QueueCapacity)

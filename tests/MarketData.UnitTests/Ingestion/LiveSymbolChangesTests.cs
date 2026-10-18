@@ -1,7 +1,7 @@
 using MarketData.Application.Ingestion;
 using MarketData.Application.Symbols;
-using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Logging.Abstractions;
+using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Options;
 
 namespace MarketData.UnitTests.Ingestion;
@@ -13,7 +13,7 @@ public sealed class LiveSymbolChangesTests : IAsyncDisposable
 
     private readonly OpenBinanceFeed _feed = new();
     private readonly SymbolChangesQueue _changes = new(Options.Create(new IngestionOptions()), NullLogger<SymbolChangesQueue>.Instance);
-    private readonly CandleQueue _queue = new(Options.Create(new IngestionOptions { QueueCapacity = 100 }), NullLogger<CandleQueue>.Instance);
+    private readonly CandleIngestionQueue _queue = new(Options.Create(new IngestionOptions { QueueCapacity = 100 }), NullLogger<CandleIngestionQueue>.Instance);
     private readonly CancellationTokenSource _stop = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
     private Task _running = Task.CompletedTask;
 

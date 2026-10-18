@@ -1,11 +1,11 @@
 using MarketData.Application.Ingestion;
 using MarketData.Domain.Candles;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MarketData.UnitTests.Ingestion;
 
-public class CandleQueueTests
+public class CandleIngestionQueueTests
 {
     [Fact]
     public void TryRead_CandlesQueued_ReturnsThemOldestFirst()
@@ -33,7 +33,7 @@ public class CandleQueueTests
     [Fact]
     public void Enqueue_DefaultCapacity_HoldsADayOfCandlesForTwentySymbols()
     {
-        var queue = new CandleQueue(Options.Create(new IngestionOptions()), NullLogger<CandleQueue>.Instance);
+        var queue = new CandleIngestionQueue(Options.Create(new IngestionOptions()), NullLogger<CandleIngestionQueue>.Instance);
         var candles = Enumerable.Range(0, 24 * 60)
             .SelectMany(minute => Enumerable.Range(0, 20).Select(symbol => TestCandles.At(minute, $"SYM{symbol:D2}")))
             .ToList();
@@ -46,10 +46,10 @@ public class CandleQueueTests
         Assert.Equal(candles, Drain(queue));
     }
 
-    private static CandleQueue NewQueue(int capacity) =>
-        new(Options.Create(new IngestionOptions { QueueCapacity = capacity }), NullLogger<CandleQueue>.Instance);
+    private static CandleIngestionQueue NewQueue(int capacity) =>
+        new(Options.Create(new IngestionOptions { QueueCapacity = capacity }), NullLogger<CandleIngestionQueue>.Instance);
 
-    private static List<Candle> Drain(CandleQueue queue)
+    private static List<Candle> Drain(CandleIngestionQueue queue)
     {
         var candles = new List<Candle>();
         while (queue.TryRead(out var candle))

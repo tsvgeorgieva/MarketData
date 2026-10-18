@@ -1,4 +1,4 @@
-namespace MarketData.Application.Symbols;
+namespace MarketData.Application.Symbols.Interfaces;
 
 public interface ISymbolChangeEventHandler
 {
