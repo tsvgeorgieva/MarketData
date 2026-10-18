@@ -1,4 +1,4 @@
-namespace MarketData.Application.Symbols;
+namespace MarketData.Application.Symbols.Options;
 
 public sealed class SymbolsOptions
 {

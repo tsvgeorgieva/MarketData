@@ -1,11 +1,13 @@
 using MarketData.Application.Ingestion;
+using MarketData.Application.Ingestion.Options;
 using MarketData.Application.Ingestion.Interfaces;
-using MarketData.Application.Prices.Interfaces;
+using MarketData.Application.Symbols.Options;
 using MarketData.Application.Prices;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.DependencyInjection;
-using MarketData.Application.Symbols.Interfaces;
+using MarketData.Application.Prices.Interfaces;
 using MarketData.Application.Symbols;
+using MarketData.Application.Symbols.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace MarketData.Application;
 

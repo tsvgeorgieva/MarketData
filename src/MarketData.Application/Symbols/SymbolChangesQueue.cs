@@ -1,8 +1,9 @@
 using MarketData.Domain.Symbols;
 using System.Threading.Channels;
+using MarketData.Application.Ingestion.Options;
 using MarketData.Application.Ingestion;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace MarketData.Application.Symbols;
 

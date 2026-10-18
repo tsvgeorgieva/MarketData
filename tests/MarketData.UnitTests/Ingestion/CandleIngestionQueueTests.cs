@@ -1,6 +1,7 @@
 using MarketData.Application.Ingestion;
-using MarketData.Domain.Candles;
+using MarketData.Application.Ingestion.Options;
 using Microsoft.Extensions.Options;
+using MarketData.Domain.Candles;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MarketData.UnitTests.Ingestion;

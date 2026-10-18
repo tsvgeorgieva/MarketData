@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MarketData.Application.Ingestion;
+namespace MarketData.Application.Ingestion.Options;
 
 public sealed class IngestionOptions
 {

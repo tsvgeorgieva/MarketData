@@ -1,8 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Threading.Channels;
+using MarketData.Application.Ingestion.Options;
 using Microsoft.Extensions.Logging;
-using MarketData.Domain.Candles;
+using System.Threading.Channels;
 using Microsoft.Extensions.Options;
+using MarketData.Domain.Candles;
 
 namespace MarketData.Application.Ingestion;
 

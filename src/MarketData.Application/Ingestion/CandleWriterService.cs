@@ -1,8 +1,9 @@
 using MarketData.Domain.Candles;
 using MarketData.Application.Ingestion.Interfaces;
+using MarketData.Application.Ingestion.Options;
 using MarketData.Domain.Interfaces;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace MarketData.Application.Ingestion;
 

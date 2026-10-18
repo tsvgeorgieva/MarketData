@@ -1,8 +1,9 @@
 using MarketData.Application.Ingestion;
-using MarketData.Application.Symbols;
+using MarketData.Application.Ingestion.Options;
 using Microsoft.Extensions.Logging.Abstractions;
-using MarketData.Domain.Symbols;
+using MarketData.Application.Symbols;
 using Microsoft.Extensions.Options;
+using MarketData.Domain.Symbols;
 
 namespace MarketData.UnitTests.Ingestion;
 

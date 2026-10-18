@@ -1,8 +1,9 @@
 using MarketData.Application.Symbols;
-using MarketData.Domain.Symbols;
+using MarketData.Application.Symbols.Options;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace MarketData.Infrastructure.Persistence;
 
