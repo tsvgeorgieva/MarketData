@@ -19,19 +19,21 @@ The environment is defined in **Bicep**. It can be recreated from the repository
 
 ## 3. CI/CD
 
-Two GitHub Actions pipelines:
+Three GitHub Actions pipelines:
 
 | Pipeline | When | What it does |
 | --- | --- | --- |
-| **Build** | Pull request and push to `main` | Runs the tests and builds the image. On `main` it pushes the image to the registry, tagged with the commit |
+| **PR check** | Pull request | Runs the tests and builds the image, but pushes nothing |
+| **Build** | Push to `main` | Runs the tests, builds the image and pushes it to the registry, tagged with the commit |
 | **Deploy** | After a successful build on `main`, or manually with an image tag | Updates the Container App to that image and checks that it is healthy |
 
-- **Why two pipelines:** an image is built once and deployed many times. Rolling back means redeploying an older tag, with no rebuild.
+- **Why a separate PR check:** a pull request is validated without registry access, so unreviewed code never reaches the registry.
+- **Why build and deploy are separate:** an image is built once and deployed many times. Rolling back means redeploying an older tag, with no rebuild.
 - **Why tests run before the image is pushed:** only tested code ever reaches the registry.
 - **Why no stored Azure credentials:** the pipelines sign in with a federated identity, so there is no secret to leak or rotate.
 - **Why an approval gate on deploy:** production changes need a deliberate go-ahead.
 
 ## Known limits
 
-- Each deploy restarts the service. It reconnects to Binance and backfills the gap.
-- Single region and no alerting. First alert to add: no candles stored for 5 minutes.
+- Each deploy restarts the service and drops the Binance connection. Candles closed during the restart are not backfilled yet; this is a future improvement.
+- Multi-region deployment and reliability are out of scope for now.
