@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using MarketData.Domain.Candles;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.UnitTests.Ingestion;
 

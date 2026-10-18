@@ -1,5 +1,5 @@
-using MarketData.Domain.Interfaces;
 using MarketData.Application.Ingestion.Interfaces;
+using MarketData.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.Application.Ingestion;
@@ -15,6 +15,7 @@ public sealed class IngestionService(
     {
         try
         {
+            await InitializeStreamAsync(stoppingToken);
             await CollectAsync(stoppingToken);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -26,12 +27,16 @@ public sealed class IngestionService(
         }
     }
 
-    private async Task CollectAsync(CancellationToken stoppingToken)
+    /// <summary>Opens the connection for the Monitored Symbols; the stream waits for one to be added when there is none.</summary>
+    private async Task InitializeStreamAsync(CancellationToken stoppingToken)
     {
         var monitored = (await monitoredSymbolRepository.GetAllAsync(stoppingToken)).Select(symbol => symbol.Symbol).ToList();
         await binanceStream.ConnectAsync(monitored, stoppingToken);
-        logger.LogInformation("Collecting closed candles for {Count} symbols", monitored.Count);
+        logger.LogInformation("Connected for {Count} symbols", monitored.Count);
+    }
 
+    private async Task CollectAsync(CancellationToken stoppingToken)
+    {
         await foreach (var candle in binanceStream.ReadClosedAsync(stoppingToken))
         {
             // The open stream can still carry a Symbol removed after it was subscribed; its Candles are not collected.

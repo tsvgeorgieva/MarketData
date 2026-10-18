@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
-using MarketData.Domain.Symbols;
 using MarketData.Infrastructure.Binance;
-using Microsoft.Extensions.Logging.Abstractions;
+using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MarketData.UnitTests.Binance;
 

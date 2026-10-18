@@ -1,14 +1,14 @@
 using System.Buffers;
 using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json;
+using System.Runtime.CompilerServices;
 using MarketData.Domain.Candles;
-using MarketData.Domain.Interfaces;
-using MarketData.Domain.Symbols;
-using MarketData.Infrastructure.Binance.Models;
-using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
+using MarketData.Infrastructure.Binance.Models;
+using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.Infrastructure.Binance;
 

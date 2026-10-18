@@ -1,24 +1,42 @@
 using System.Threading.Channels;
 using MarketData.Domain.Candles;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.UnitTests.Ingestion;
 
-/// <summary>A Binance connection that stays open until the test ends it: delivers the Candles the test publishes and records every subscribe and unsubscribe.</summary>
+/// <summary>
+/// A Binance stream that stays open until the test ends it. Like the real one it remembers Symbols subscribed before it connects,
+/// sends subscribe and unsubscribe requests only once connected (recorded in <see cref="Calls"/>), and delivers the Candles the test publishes.
+/// </summary>
 internal sealed class OpenBinanceFeed : IBinanceStream
 {
     private readonly Channel<Candle> _candles = Channel.CreateUnbounded<Candle>();
     private readonly List<string> _calls = [];
+    private readonly HashSet<SymbolCode> _registered = [];
     private readonly Lock _lock = new();
+    private readonly TaskCompletionSource _connected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private bool _isConnected;
 
-    private readonly TaskCompletionSource<IReadOnlyCollection<SymbolCode>> _connected =
-        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <summary>While set, connecting waits until the task completes.</summary>
+    public Task? HoldConnectUntil { get; set; }
 
-    /// <summary>Completes with the Symbols the service connected with.</summary>
-    public Task<IReadOnlyCollection<SymbolCode>> Connected => _connected.Task;
+    /// <summary>Completes when the service has connected.</summary>
+    public Task Connected => _connected.Task;
 
-    /// <summary>Each call made on the open connection, like <c>SUBSCRIBE XRPUSDT</c>, in order.</summary>
+    /// <summary>The Symbols subscribed so far, whether before or after connecting.</summary>
+    public IReadOnlyCollection<string> Registered
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _registered.Select(symbol => symbol.Value)];
+            }
+        }
+    }
+
+    /// <summary>Each request sent on the open connection, like <c>SUBSCRIBE XRPUSDT</c>, in order.</summary>
     public IReadOnlyList<string> Calls
     {
         get
@@ -32,27 +50,51 @@ internal sealed class OpenBinanceFeed : IBinanceStream
 
     public void Publish(Candle candle) => _candles.Writer.TryWrite(candle);
 
-    public Task ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    public async Task ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
-        _connected.TrySetResult(symbols);
-        return Task.CompletedTask;
+        if (HoldConnectUntil is not null)
+        {
+            await HoldConnectUntil.WaitAsync(cancellationToken);
+        }
+
+        lock (_lock)
+        {
+            _registered.UnionWith(symbols);
+            _isConnected = true;
+        }
+
+        _connected.TrySetResult();
     }
 
     public IAsyncEnumerable<Candle> ReadClosedAsync(CancellationToken cancellationToken) => _candles.Reader.ReadAllAsync(cancellationToken);
 
-    public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Record("SUBSCRIBE", symbols);
-
-    public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Record("UNSUBSCRIBE", symbols);
-
-    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
-
-    private Task Record(string method, IReadOnlyCollection<SymbolCode> symbols)
+    public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
         lock (_lock)
         {
-            _calls.Add($"{method} {string.Join(',', symbols.Select(symbol => symbol.Value))}");
+            var added = symbols.Where(_registered.Add).ToList();
+            if (_isConnected && added.Count > 0)
+            {
+                _calls.Add($"SUBSCRIBE {string.Join(',', added.Select(symbol => symbol.Value))}");
+            }
         }
 
         return Task.CompletedTask;
     }
+
+    public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    {
+        lock (_lock)
+        {
+            var removed = symbols.Where(_registered.Remove).ToList();
+            if (_isConnected && removed.Count > 0)
+            {
+                _calls.Add($"UNSUBSCRIBE {string.Join(',', removed.Select(symbol => symbol.Value))}");
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
