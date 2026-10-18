@@ -27,7 +27,7 @@ public sealed class IngestionService(
 
     private async Task CollectAsync(CancellationToken stoppingToken)
     {
-        var monitored = await monitoredSymbolRepository.GetAllAsync(stoppingToken);
+        var monitored = (await monitoredSymbolRepository.GetAllAsync(stoppingToken)).Select(symbol => symbol.Symbol).ToList();
         if (monitored.Count == 0)
         {
             logger.LogWarning("There are no Monitored Symbols; nothing is collected");
@@ -40,7 +40,11 @@ public sealed class IngestionService(
 
         await foreach (var candle in stream.ReadClosedAsync(stoppingToken))
         {
-            candleQueue.Enqueue(candle);
+            // The open stream still carries a Symbol removed after it was opened; its Candles are not collected.
+            if (await monitoredSymbolRepository.ExistsAsync(candle.Symbol, stoppingToken))
+            {
+                candleQueue.Enqueue(candle);
+            }
         }
 
         logger.LogWarning("The Binance stream ended; collection has stopped");
