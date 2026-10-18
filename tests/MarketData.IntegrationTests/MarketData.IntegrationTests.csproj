@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MarketData.Api\MarketData.Api.csproj" />
+    <ProjectReference Include="..\..\src\MarketData.Client\MarketData.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
