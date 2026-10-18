@@ -25,7 +25,13 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddHealthChecks();
 
-builder.Services.AddControllers();
+// JSON is the first formatter and so the default; XML is served only when asked for, anything else is a 406.
+builder.Services.AddControllers(options =>
+    {
+        options.ReturnHttpNotAcceptable = true;
+    })
+    .AddXmlSerializerFormatters();
+builder.Services.AddOpenApi();
 
 // Every error is a problem-details document carrying the same trace id as the log lines of the request.
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
@@ -43,6 +49,7 @@ app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.MapControllers();
+app.MapOpenApi();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 
 app.Run();
