@@ -1,8 +1,10 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using MarketData.Domain.Exceptions;
 using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Infrastructure.Binance.Models;
 using Microsoft.Extensions.Options;
 
 namespace MarketData.Infrastructure.Binance;
@@ -30,12 +32,10 @@ internal sealed class BinanceSymbolCatalog : IBinanceSymbolCatalog, IDisposable
             }
 
             response.EnsureSuccessStatusCode();
-            using var document = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
-            return document.RootElement.GetProperty("symbols").EnumerateArray()
-                .Any(listed => listed.GetProperty("symbol").GetString() == symbol.Value
-                    && listed.GetProperty("status").GetString() == "TRADING");
+            var info = await response.Content.ReadFromJsonAsync<ExchangeInfo>(cancellationToken) ?? throw new JsonException("Binance sent an empty answer.");
+            return info.Symbols.Any(listed => listed.Symbol == symbol.Value && listed.Status == ExchangeSymbol.TradingStatus);
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
         {
             if (cancellationToken.IsCancellationRequested)
             {

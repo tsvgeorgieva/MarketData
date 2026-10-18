@@ -14,14 +14,14 @@ public sealed class SymbolAdministrationService(
     public Task<IReadOnlyList<MonitoredSymbol>> ListAsync(CancellationToken cancellationToken) =>
         monitoredSymbolRepository.GetAllAsync(cancellationToken);
 
-    public async Task<SymbolAddition> AddAsync(string symbolText, CancellationToken cancellationToken)
+    public async Task<(MonitoredSymbol Symbol, bool Added)> AddAsync(string symbolText, CancellationToken cancellationToken)
     {
         var symbol = Parse(symbolText);
         var monitoredSymbols = await monitoredSymbolRepository.GetAllAsync(cancellationToken);
         var existing = monitoredSymbols.FirstOrDefault(monitored => monitored.Symbol == symbol);
         if (existing is not null)
         {
-            return new SymbolAddition(false, existing);
+            return (existing, false);
         }
 
         if (monitoredSymbols.Count >= options.Value.MaxMonitored)

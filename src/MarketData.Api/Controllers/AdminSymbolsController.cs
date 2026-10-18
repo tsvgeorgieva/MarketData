@@ -18,9 +18,9 @@ public class AdminSymbolsController(ISymbolAdministrationService symbolAdministr
     [HttpPut("{symbol}")]
     public async Task<ActionResult<MonitoredSymbolResponse>> Add(string symbol, CancellationToken cancellationToken)
     {
-        var addition = await symbolAdministrationService.AddAsync(symbol, cancellationToken);
-        var response = SymbolResponseMapper.ToResponse(addition.Monitored);
-        return addition.Added ? StatusCode(StatusCodes.Status201Created, response) : response;
+        var (monitored, added) = await symbolAdministrationService.AddAsync(symbol, cancellationToken);
+        var response = SymbolResponseMapper.ToResponse(monitored);
+        return added ? StatusCode(StatusCodes.Status201Created, response) : response;
     }
 
     [HttpDelete("{symbol}")]

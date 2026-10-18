@@ -23,7 +23,7 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
         return await db.MonitoredSymbols.AnyAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
     }
 
-    public async Task<SymbolAddition> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, int maxMonitored, CancellationToken cancellationToken)
+    public async Task<(MonitoredSymbol Symbol, bool Added)> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, int maxMonitored, CancellationToken cancellationToken)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -36,7 +36,7 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
         var row = await db.MonitoredSymbols.AsNoTracking().FirstOrDefaultAsync(monitored => monitored.Symbol == symbol, cancellationToken);
         if (row is { RemovedAt: null })
         {
-            return new SymbolAddition(false, row);
+            return (row, false);
         }
 
         if (await db.MonitoredSymbols.CountAsync(monitored => monitored.RemovedAt == null, cancellationToken) >= maxMonitored)
@@ -63,7 +63,7 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
         }
 
         await transaction.CommitAsync(cancellationToken);
-        return new SymbolAddition(true, added);
+        return (added, true);
     }
 
     public async Task RemoveAsync(SymbolCode symbol, DateTimeOffset removedAt, CancellationToken cancellationToken)
