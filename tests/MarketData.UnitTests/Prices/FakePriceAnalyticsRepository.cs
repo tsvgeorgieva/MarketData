@@ -1,4 +1,5 @@
 using MarketData.Domain.Interfaces;
+using MarketData.Domain.Candles;
 using MarketData.Domain.Prices;
 using MarketData.Domain.Symbols;
 
@@ -17,4 +18,7 @@ internal sealed class FakePriceAnalyticsRepository : ICandlePriceAnalyticsReposi
         RequestedWindow = (windowStart, windowEnd);
         return Task.FromResult(Result);
     }
+
+    public Task<IReadOnlyList<Candle>> GetLastCandlesPerPeriodAsync(SymbolCode symbol, Period period, DateTime from, DateTime through, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 }

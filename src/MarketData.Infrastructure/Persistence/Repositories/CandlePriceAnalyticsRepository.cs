@@ -1,7 +1,9 @@
+using System.Data;
 using MarketData.Domain.Candles;
 using MarketData.Domain.Interfaces;
 using MarketData.Domain.Prices;
 using MarketData.Domain.Symbols;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketData.Infrastructure.Persistence.Repositories;
@@ -35,5 +37,35 @@ internal sealed class CandlePriceAnalyticsRepository(IDbContextFactory<MarketDat
                 result.LastOpenTime + Candle.Length,
                 result.Average,
                 result.Count);
+    }
+
+    public async Task<IReadOnlyList<Candle>> GetLastCandlesPerPeriodAsync(
+        SymbolCode symbol, Period period, DateTime from, DateTime through, CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        // The Candle that opened last in each Bucket, found by numbering a Period's Candles from the newest. Periods are counted in minutes
+        // from 1970-01-05, a Monday midnight, so weeks start on Monday. The symbol is passed as varchar like its column to keep the key seek.
+        return await db.Candles
+            .FromSqlRaw(
+                """
+                SELECT Symbol, OpenTime, [Open], High, Low, [Close], Volume
+                FROM (
+                    SELECT *,
+                        ROW_NUMBER() OVER (
+                            PARTITION BY DATEDIFF_BIG(minute, '1970-01-05', OpenTime) / @periodMinutes
+                            ORDER BY OpenTime DESC) AS Newest
+                    FROM Candles
+                    WHERE Symbol = @symbol AND OpenTime >= @from AND OpenTime <= @through
+                ) AS numbered
+                WHERE Newest = 1
+                """,
+                new SqlParameter("periodMinutes", (long)period.Length.TotalMinutes),
+                new SqlParameter("symbol", SqlDbType.VarChar, 20) { Value = symbol.Value },
+                new SqlParameter("from", SqlDbType.DateTime2) { Value = from },
+                new SqlParameter("through", SqlDbType.DateTime2) { Value = through })
+            .AsNoTracking()
+            .OrderBy(candle => candle.OpenTime)
+            .ToListAsync(cancellationToken);
     }
 }

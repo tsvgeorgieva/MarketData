@@ -1,4 +1,5 @@
 using MarketData.Domain.Interfaces;
+using MarketData.Domain.Candles;
 using MarketData.Domain.Prices;
 using MarketData.Domain.Symbols;
 
@@ -10,5 +11,8 @@ public sealed class ThrowingPriceAnalyticsRepository : ICandlePriceAnalyticsRepo
     public const string SecretDetail = "secret internal detail";
 
     public Task<AveragePrice?> GetAveragePriceAsync(SymbolCode symbol, DateTimeOffset windowStart, DateTimeOffset windowEnd, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException(SecretDetail);
+
+    public Task<IReadOnlyList<Candle>> GetLastCandlesPerPeriodAsync(SymbolCode symbol, Period period, DateTime from, DateTime through, CancellationToken cancellationToken) =>
         throw new InvalidOperationException(SecretDetail);
 }

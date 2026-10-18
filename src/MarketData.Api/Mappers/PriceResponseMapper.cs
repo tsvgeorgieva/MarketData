@@ -13,4 +13,16 @@ internal static class PriceResponseMapper
         Average = average.Average,
         DataPoints = average.DataPoints,
     };
+
+    public static SimpleMovingAverageResponse ToResponse(SimpleMovingAverage average) => new()
+    {
+        Symbol = average.Symbol.Value,
+        Period = average.Period.Code,
+        Requested = average.Requested,
+        From = average.From,
+        To = average.To,
+        Average = average.Average,
+        DataPoints = average.DataPoints,
+        InProgress = average.InProgress,
+    };
 }
