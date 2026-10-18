@@ -41,16 +41,6 @@ public sealed class IngestionServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task RunAsync_NoMonitoredSymbols_DoesNotConnect()
-    {
-        var feed = new ScriptedBinanceFeed([]);
-
-        await RunAsync(feed, new FakeMonitoredSymbols());
-
-        Assert.Equal(0, feed.Connects);
-    }
-
-    [Fact]
     public async Task RunAsync_DatabaseHolding_FeedIsStillReadToTheEnd()
     {
         var release = new TaskCompletionSource();

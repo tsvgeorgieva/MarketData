@@ -23,6 +23,7 @@ internal sealed class BinanceStream(IOptions<BinanceOptions> options, ILogger<Bi
     // A WebSocket allows one send at a time, and the subscribed set changes together with what is sent.
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly HashSet<SymbolCode> _subscribed = [];
+    private TaskCompletionSource? _symbolSubscribed;
     private ClientWebSocket? _socket;
     private int _requestId;
 
@@ -32,6 +33,7 @@ internal sealed class BinanceStream(IOptions<BinanceOptions> options, ILogger<Bi
         try
         {
             _subscribed.UnionWith(symbols);
+            await WaitForASymbolAsync(cancellationToken);
             var uri = new Uri($"{options.Value.WebSocketUrl}/stream?streams={string.Join('/', _subscribed.Select(StreamName))}");
 
             var socket = new ClientWebSocket();
@@ -72,6 +74,7 @@ internal sealed class BinanceStream(IOptions<BinanceOptions> options, ILogger<Bi
         try
         {
             var added = symbols.Where(_subscribed.Add).ToList();
+            _symbolSubscribed?.TrySetResult();
             await SendIfOpenAsync("SUBSCRIBE", added, cancellationToken);
         }
         finally
@@ -153,6 +156,25 @@ internal sealed class BinanceStream(IOptions<BinanceOptions> options, ILogger<Bi
             kline.Low,
             kline.Close,
             kline.Volume);
+    }
+
+    /// <summary>A connection needs at least one stream, so with no Symbols this waits (without holding the gate) until one is subscribed.</summary>
+    private async Task WaitForASymbolAsync(CancellationToken cancellationToken)
+    {
+        while (_subscribed.Count == 0)
+        {
+            logger.LogWarning("There are no Monitored Symbols; waiting for one to be added");
+            var subscribed = _symbolSubscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _gate.Release();
+            try
+            {
+                await subscribed.Task.WaitAsync(cancellationToken);
+            }
+            finally
+            {
+                await _gate.WaitAsync(CancellationToken.None);
+            }
+        }
     }
 
     /// <summary>Sends the request when the connection is open; otherwise the change is only remembered and applies when the connection opens.</summary>
