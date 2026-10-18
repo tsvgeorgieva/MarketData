@@ -22,6 +22,20 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
         return await db.MonitoredSymbols.AnyAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
     }
 
+    public async Task<MonitoredSymbol?> FindAsync(SymbolCode symbol, CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.MonitoredSymbols
+            .AsNoTracking()
+            .FirstOrDefaultAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
+    }
+
+    public async Task<int> CountAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.MonitoredSymbols.CountAsync(monitored => monitored.RemovedAt == null, cancellationToken);
+    }
+
     public async Task<MonitoredSymbol> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, CancellationToken cancellationToken)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);

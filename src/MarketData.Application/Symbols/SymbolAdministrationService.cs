@@ -17,14 +17,13 @@ public sealed class SymbolAdministrationService(
     public async Task<(MonitoredSymbol Symbol, bool Added)> AddAsync(string symbolText, CancellationToken cancellationToken)
     {
         var symbol = Parse(symbolText);
-        var monitoredSymbols = await monitoredSymbolRepository.GetAllAsync(cancellationToken);
-        var existing = monitoredSymbols.FirstOrDefault(monitored => monitored.Symbol == symbol);
+        var existing = await monitoredSymbolRepository.FindAsync(symbol, cancellationToken);
         if (existing is not null)
         {
             return (existing, false);
         }
 
-        if (monitoredSymbols.Count >= options.Value.MaxMonitored)
+        if (await monitoredSymbolRepository.CountAsync(cancellationToken) >= options.Value.MaxMonitored)
         {
             throw new ConflictException($"At most {options.Value.MaxMonitored} symbols can be monitored.");
         }
