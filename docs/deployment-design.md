@@ -19,19 +19,20 @@ The environment is defined in **Bicep**. It can be recreated from the repository
 
 ## 3. CI/CD
 
-Three GitHub Actions pipelines:
+Four GitHub Actions pipelines:
 
 | Pipeline | When | What it does |
 | --- | --- | --- |
 | **PR check** | Pull request | Runs the tests and builds the image, but pushes nothing |
 | **Build** | Push to `main` | Runs the tests, builds the image and pushes it to the registry, tagged with the commit |
 | **Deploy** | After a successful build on `main`, or manually with an image tag | Updates the Container App to that image and checks that it is healthy |
+| **Infrastructure** | Manually, and on changes to the Bicep files on `main` | Previews the changes to the Azure environment, then applies them after approval |
 
 - **Why a separate PR check:** a pull request is validated without registry access, so unreviewed code never reaches the registry.
 - **Why build and deploy are separate:** an image is built once and deployed many times. Rolling back means redeploying an older tag, with no rebuild.
 - **Why tests run before the image is pushed:** only tested code ever reaches the registry.
-- **Why no stored Azure credentials:** the pipelines sign in with a federated identity, so there is no secret to leak or rotate.
-- **Why an approval gate on deploy:** production changes need a deliberate go-ahead.
+- **Why infrastructure has its own pipeline:** the environment changes rarely and for different reasons than the app, so an app deploy never touches it. The preview step shows what will change before it does.
+- **Why an approval gate on deploy and infrastructure:** production changes need a deliberate go-ahead.
 
 ## Known limits
 
