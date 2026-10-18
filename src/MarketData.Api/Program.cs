@@ -1,4 +1,6 @@
 using MarketData.Api.Admin;
+using MarketData.Api.Ingestion;
+using MarketData.Application;
 using MarketData.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
@@ -16,8 +18,15 @@ builder.Services.AddOptions<AdminOptions>()
     .BindConfiguration(AdminOptions.SectionName)
     .ValidateDataAnnotations()
     .ValidateOnStart();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddHealthChecks();
+
+// Hosted services start in this order and stop in reverse: the database is ready before anything runs,
+// and on shutdown the feed stops first so the writer can save what is still queued.
+builder.Services.AddHostedService<CandleWriterHostedService>();
+builder.Services.AddHostedService<IngestionHostedService>();
 
 var app = builder.Build();
 

@@ -1,3 +1,4 @@
+using MarketData.Domain.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -8,7 +9,7 @@ using Serilog.Core;
 
 namespace MarketData.IntegrationTests.Infrastructure;
 
-/// <summary>The real API host on a real database, with the clock under test control.</summary>
+/// <summary>The real API host on a real database, with Binance and the clock under test control.</summary>
 public sealed class ApiFactory(
     string connectionString,
     bool migrateOnStartup = true,
@@ -17,6 +18,8 @@ public sealed class ApiFactory(
     public const string ValidAdminApiKey = "test-only-admin-key-0123456789";
 
     public FakeTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+    public FakeBinance Binance { get; } = new();
 
     public CapturingLogSink Logs { get; } = new();
 
@@ -33,6 +36,7 @@ public sealed class ApiFactory(
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<TimeProvider>(Clock);
+            services.AddSingleton<IBinanceStreamFactory>(Binance);
             services.AddSingleton<ILogEventSink>(Logs);
         });
     }

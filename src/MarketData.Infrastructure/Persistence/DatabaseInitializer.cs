@@ -1,28 +1,32 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace MarketData.Infrastructure.Persistence;
 
+/// <summary>Runs first at startup: migrates when asked to, then seeds the database.</summary>
 internal sealed class DatabaseInitializer(
-    IServiceScopeFactory scopeFactory,
-    IOptions<DatabaseOptions> options,
+    IDbContextFactory<MarketDataDbContext> dbFactory,
+    IOptions<DatabaseOptions> database,
+    DatabaseSeeder seeder,
     ILogger<DatabaseInitializer> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!options.Value.MigrateOnStartup)
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        if (database.Value.MigrateOnStartup)
+        {
+            await db.Database.MigrateAsync(cancellationToken);
+            logger.LogInformation("Database migrated");
+        }
+        else
         {
             logger.LogInformation("Database migration on startup is off");
-            return;
         }
 
-        await using var scope = scopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketDataDbContext>();
-        await db.Database.MigrateAsync(cancellationToken);
-        logger.LogInformation("Database migrated");
+        await seeder.SeedAsync(db, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
