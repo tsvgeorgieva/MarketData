@@ -15,4 +15,12 @@ public class PricesController(IPriceAnalyticsService priceAnalyticsService) : Co
         var average = await priceAnalyticsService.GetAveragePrice24hAsync(symbol, cancellationToken);
         return PriceResponseMapper.ToResponse(average);
     }
+
+    [HttpGet("SimpleMovingAverage")]
+    public async Task<ActionResult<SimpleMovingAverageResponse>> GetSimpleMovingAverage(
+        string symbol, [FromQuery] Contracts.SimpleMovingAverageRequest query, CancellationToken cancellationToken)
+    {
+        var average = await priceAnalyticsService.GetSimpleMovingAverageAsync(PriceResponseMapper.ToRequest(symbol, query), cancellationToken);
+        return PriceResponseMapper.ToResponse(average);
+    }
 }
