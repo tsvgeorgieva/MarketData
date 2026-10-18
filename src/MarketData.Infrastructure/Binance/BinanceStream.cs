@@ -3,6 +3,8 @@ using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using MarketData.Domain.Candles;
 using MarketData.Domain.Interfaces;
+using MarketData.Domain.Symbols;
+using MarketData.Infrastructure.Binance.Models;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.Infrastructure.Binance;
@@ -13,11 +15,11 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
 
     public async IAsyncEnumerable<Candle> ReadClosedAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var update in ReadUpdatesAsync(cancellationToken))
+        await foreach (var message in ReadMessagesAsync(cancellationToken))
         {
-            if (update.IsClosed)
+            if (ToClosedCandle(message) is { } candle)
             {
-                yield return update.Candle;
+                yield return candle;
             }
         }
     }
@@ -40,10 +42,29 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
         socket.Dispose();
     }
 
-    private async IAsyncEnumerable<KlineUpdate> ReadUpdatesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <summary>The Candle of a closed kline, or null while the minute is still open.</summary>
+    internal static Candle? ToClosedCandle(KlineMessage message)
+    {
+        var kline = message.Data.Kline;
+        if (!kline.IsClosed || !SymbolCode.TryParse(kline.Symbol, out var symbol))
+        {
+            return null;
+        }
+
+        return new Candle(
+            symbol,
+            DateTimeOffset.FromUnixTimeMilliseconds(kline.OpenTime),
+            kline.Open,
+            kline.High,
+            kline.Low,
+            kline.Close,
+            kline.Volume);
+    }
+
+    private async IAsyncEnumerable<KlineMessage> ReadMessagesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var frame = new byte[FrameSize];
-        var message = new ArrayBufferWriter<byte>();
+        var buffer = new ArrayBufferWriter<byte>();
 
         while (socket.State == WebSocketState.Open)
         {
@@ -53,22 +74,22 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
                 yield break;
             }
 
-            message.Write(frame.AsSpan(0, result.Count));
+            buffer.Write(frame.AsSpan(0, result.Count));
             if (!result.EndOfMessage)
             {
                 continue;
             }
 
-            if (KlineMessageParser.TryParse(message.WrittenMemory, out var update))
+            if (KlineMessageParser.TryParse(buffer.WrittenMemory, out var message))
             {
-                yield return update;
+                yield return message;
             }
             else
             {
-                logger.LogWarning("Ignored an unrecognised Binance message of {Length} bytes", message.WrittenCount);
+                logger.LogWarning("Ignored an unrecognised Binance message of {Length} bytes", buffer.WrittenCount);
             }
 
-            message.Clear();
+            buffer.Clear();
         }
     }
 }
