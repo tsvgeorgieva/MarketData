@@ -33,12 +33,10 @@ The solution was built with Claude Code and the skills library by Matt Pocock ([
    | [#22 24h average endpoint](https://github.com/tsvgeorgieva/MarketData/issues/22) | [#36](https://github.com/tsvgeorgieva/MarketData/pull/36) |
    | [#23 XML and content negotiation](https://github.com/tsvgeorgieva/MarketData/issues/23) | [#37](https://github.com/tsvgeorgieva/MarketData/pull/37) |
    | [#24 Simple Moving Average endpoint](https://github.com/tsvgeorgieva/MarketData/issues/24) | [#38](https://github.com/tsvgeorgieva/MarketData/pull/38) |
-   | [#25 Backfill and reconnect](https://github.com/tsvgeorgieva/MarketData/issues/25) | no pull request yet |
    | [#27 Admin auth, list and remove symbols](https://github.com/tsvgeorgieva/MarketData/issues/27) | [#39](https://github.com/tsvgeorgieva/MarketData/pull/39) |
    | [#28 Add symbol](https://github.com/tsvgeorgieva/MarketData/issues/28) | [#40](https://github.com/tsvgeorgieva/MarketData/pull/40) |
    | [#29 Live symbol changes](https://github.com/tsvgeorgieva/MarketData/issues/29) | [#42](https://github.com/tsvgeorgieva/MarketData/pull/42), [#43](https://github.com/tsvgeorgieva/MarketData/pull/43) |
    | [#30 Console client](https://github.com/tsvgeorgieva/MarketData/issues/30) | [#41](https://github.com/tsvgeorgieva/MarketData/pull/41) |
-   | [#32 Handover docs](https://github.com/tsvgeorgieva/MarketData/issues/32) | no pull request yet |
 
 4. **Implementation: `implement`.** It implemented the tickets above, one pull request per ticket (links in the table).
 
