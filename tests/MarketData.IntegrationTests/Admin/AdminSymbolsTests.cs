@@ -7,6 +7,9 @@ using MarketData.Domain.Candles;
 using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
 using MarketData.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MarketData.IntegrationTests.Admin;
@@ -160,6 +163,101 @@ public class AdminSymbolsTests(SqlServerFixture sql)
         Assert.Equal(0, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM Candles WHERE Symbol = 'BTCUSDT'"));
     }
 
+    [Fact]
+    public async Task Add_NewTradingSymbol_ReturnsCreatedAndListsIt()
+    {
+        await using var factory = NewFactory(out _);
+        using var client = AdminClient(factory);
+
+        var response = await client.PutAsync("/api/admin/symbols/xrpusdt", content: null, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadFromJsonAsync<MonitoredSymbolResponse>(TestContext.Current.CancellationToken);
+        var list = await client.GetFromJsonAsync<MonitoredSymbolsResponse>("/api/admin/symbols", TestContext.Current.CancellationToken);
+        Assert.Equal(
+            (HttpStatusCode.Created, "XRPUSDT", Now.UtcDateTime, true),
+            (response.StatusCode, body!.Symbol, body.AddedAt, list!.Symbols.Any(symbol => symbol.Symbol == "XRPUSDT")));
+    }
+
+    [Fact]
+    public async Task Add_SymbolBinanceDoesNotTrade_ReturnsUnprocessableAndSavesNothing()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+
+        var response = await client.PutAsync("/api/admin/symbols/NOPEUSDT", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            (HttpStatusCode.UnprocessableEntity, 0),
+            (response.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'NOPEUSDT'")));
+    }
+
+    [Fact]
+    public async Task Add_BinanceUnreachable_ReturnsServiceUnavailableAndSavesNothing()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        factory.Catalog.Unreachable = true;
+
+        var response = await client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            (HttpStatusCode.ServiceUnavailable, 0),
+            (response.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
+    }
+
+    [Fact]
+    public async Task Add_AlreadyMonitoredSymbol_ReturnsOkChangesNothingAndSkipsBinance()
+    {
+        await using var factory = NewFactory(out _);
+        using var client = AdminClient(factory);
+        factory.Clock.Advance(TimeSpan.FromHours(1));
+
+        var response = await client.PutAsync("/api/admin/symbols/BTCUSDT", content: null, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadFromJsonAsync<MonitoredSymbolResponse>(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            (HttpStatusCode.OK, Now.UtcDateTime, 0),
+            (response.StatusCode, body!.AddedAt, factory.Catalog.Calls));
+    }
+
+    [Fact]
+    public async Task Add_RemovedSymbol_ReturnsCreatedReusesItsRowAndKeepsItsCandles()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        await factory.Services.GetRequiredService<ICandleRepository>()
+            .InsertMissingAsync([Candle("BTCUSDT", minute: 0, close: 100m)], TestContext.Current.CancellationToken);
+        await client.DeleteAsync("/api/admin/symbols/BTCUSDT", TestContext.Current.CancellationToken);
+        factory.Clock.Advance(TimeSpan.FromHours(1));
+
+        var response = await client.PutAsync("/api/admin/symbols/BTCUSDT", content: null, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadFromJsonAsync<MonitoredSymbolResponse>(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            (HttpStatusCode.Created, Now.UtcDateTime.AddHours(1), 1, 0, 1),
+            (response.StatusCode,
+                body!.AddedAt,
+                await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'BTCUSDT'"),
+                await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'BTCUSDT' AND RemovedAt IS NOT NULL"),
+                await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM Candles WHERE Symbol = 'BTCUSDT'")));
+    }
+
+    [Fact]
+    public async Task Add_NewSymbolAboveTheCap_ReturnsConflictSavesNothingButStillAcceptsAMonitoredOne()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        await using var capped = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Symbols:MaxMonitored"] = "3" })));
+        using var client = AdminClient(capped);
+
+        var overCap = await client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken);
+        var monitored = await client.PutAsync("/api/admin/symbols/BTCUSDT", content: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            (HttpStatusCode.Conflict, HttpStatusCode.OK, 0),
+            (overCap.StatusCode, monitored.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
+    }
+
     private ApiFactory NewFactory(out string connectionString)
     {
         connectionString = sql.NewDatabaseConnectionString();
@@ -168,7 +266,7 @@ public class AdminSymbolsTests(SqlServerFixture sql)
         return factory;
     }
 
-    private static HttpClient AdminClient(ApiFactory factory)
+    private static HttpClient AdminClient(WebApplicationFactory<Program> factory)
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add(AdminApiKeyAttribute.HeaderName, ApiFactory.ValidAdminApiKey);

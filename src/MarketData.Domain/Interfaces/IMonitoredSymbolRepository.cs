@@ -10,6 +10,15 @@ public interface IMonitoredSymbolRepository
     /// <summary>Whether the Symbol is currently monitored; false for an unknown or Removed Symbol.</summary>
     Task<bool> ExistsAsync(SymbolCode symbol, CancellationToken cancellationToken);
 
+    /// <summary>The currently monitored Symbol, or null for an unknown or Removed Symbol.</summary>
+    Task<MonitoredSymbol?> FindAsync(SymbolCode symbol, CancellationToken cancellationToken);
+
+    /// <summary>How many Symbols are currently monitored.</summary>
+    Task<int> CountAsync(CancellationToken cancellationToken);
+
+    /// <summary>Starts monitoring the Symbol as of the given time; a Removed Symbol gets its row back.</summary>
+    Task<MonitoredSymbol> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, CancellationToken cancellationToken);
+
     /// <summary>Marks the Symbol as removed at the given time and keeps its row; does nothing for an unknown or Removed Symbol.</summary>
     Task RemoveAsync(SymbolCode symbol, DateTimeOffset removedAt, CancellationToken cancellationToken);
 }

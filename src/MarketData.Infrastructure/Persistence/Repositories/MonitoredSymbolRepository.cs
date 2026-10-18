@@ -22,6 +22,43 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
         return await db.MonitoredSymbols.AnyAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
     }
 
+    public async Task<MonitoredSymbol?> FindAsync(SymbolCode symbol, CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.MonitoredSymbols
+            .AsNoTracking()
+            .FirstOrDefaultAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
+    }
+
+    public async Task<int> CountAsync(CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.MonitoredSymbols.CountAsync(monitored => monitored.RemovedAt == null, cancellationToken);
+    }
+
+    public async Task<MonitoredSymbol> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+
+        // A Removed Symbol keeps its row, so adding it again restores that row and its Candles stay attached.
+        var restored = await db.MonitoredSymbols
+            .Where(monitored => monitored.Symbol == symbol && monitored.RemovedAt != null)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(monitored => monitored.AddedAt, addedAt)
+                    .SetProperty(monitored => monitored.RemovedAt, (DateTimeOffset?)null),
+                cancellationToken);
+
+        var monitoredSymbol = new MonitoredSymbol(symbol, addedAt);
+        if (restored == 0)
+        {
+            db.MonitoredSymbols.Add(monitoredSymbol);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return monitoredSymbol;
+    }
+
     public async Task RemoveAsync(SymbolCode symbol, DateTimeOffset removedAt, CancellationToken cancellationToken)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);

@@ -21,6 +21,8 @@ public sealed class ApiFactory(
 
     public FakeBinance Binance { get; } = new();
 
+    public FakeBinanceSymbolCatalog Catalog { get; } = new();
+
     public CapturingLogSink Logs { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -37,6 +39,7 @@ public sealed class ApiFactory(
         {
             services.AddSingleton<TimeProvider>(Clock);
             services.AddSingleton<IBinanceStreamFactory>(Binance);
+            services.AddSingleton<IBinanceSymbolCatalog>(Catalog);
             services.AddSingleton<ILogEventSink>(Logs);
         });
     }
