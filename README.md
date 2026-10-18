@@ -52,7 +52,7 @@ The compose file carries throwaway values for local use, so nothing has to be se
 
 ## Try the API
 
-The examples assume the default port and key. The interactive Swagger UI is at <http://localhost:8080/swagger>, where every endpoint can be tried from the browser. The machine-readable API description it reads is at <http://localhost:8080/openapi/v1.json>.
+The examples assume the default port and key. The interactive Swagger UI is at <http://localhost:8080/swagger>, where every endpoint can be tried from the browser. For the admin endpoints, click **Authorize** and enter the admin key. The machine-readable API description it reads is at <http://localhost:8080/openapi/v1.json>.
 
 **24-hour average price** (JSON by default, XML when asked):
 

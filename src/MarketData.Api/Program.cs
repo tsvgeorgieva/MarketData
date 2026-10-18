@@ -31,7 +31,7 @@ builder.Services.AddControllers(options =>
         options.ReturnHttpNotAcceptable = true;
     })
     .AddXmlSerializerFormatters();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddAdminApiKey());
 
 // Every error is a problem-details document carrying the same trace id as the log lines of the request.
 builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>

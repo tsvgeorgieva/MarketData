@@ -108,6 +108,22 @@ public class ContentNegotiationTests(SqlServerFixture sql)
     }
 
     [Fact]
+    public async Task Get_OpenApiDescription_DeclaresTheAdminApiKeyHeader()
+    {
+        await using var factory = NewFactory();
+        using var client = factory.CreateClient();
+
+        var body = await client.GetStringAsync("/openapi/v1.json", TestContext.Current.CancellationToken);
+
+        using var document = System.Text.Json.JsonDocument.Parse(body);
+        var scheme = document.RootElement.GetProperty("components").GetProperty("securitySchemes").GetProperty("AdminApiKey");
+        var secured = document.RootElement.GetProperty("paths").GetProperty("/api/admin/symbols").GetProperty("get").TryGetProperty("security", out _);
+        Assert.Equal(
+            ("apiKey", "header", "X-Api-Key", true),
+            (scheme.GetProperty("type").GetString(), scheme.GetProperty("in").GetString(), scheme.GetProperty("name").GetString(), secured));
+    }
+
+    [Fact]
     public async Task Get_SwaggerUi_IsServed()
     {
         await using var factory = NewFactory();
