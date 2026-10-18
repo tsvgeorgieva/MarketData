@@ -7,10 +7,12 @@ internal static class SymbolResponseMapper
 {
     public static MonitoredSymbolsResponse ToResponse(IEnumerable<MonitoredSymbol> symbols) => new()
     {
-        Symbols = [.. symbols.Select(monitored => new MonitoredSymbolResponse
-        {
-            Symbol = monitored.Symbol.Value,
-            AddedAt = monitored.AddedAt.UtcDateTime,
-        })],
+        Symbols = [.. symbols.Select(ToResponse)],
+    };
+
+    public static MonitoredSymbolResponse ToResponse(MonitoredSymbol monitored) => new()
+    {
+        Symbol = monitored.Symbol.Value,
+        AddedAt = monitored.AddedAt.UtcDateTime,
     };
 }

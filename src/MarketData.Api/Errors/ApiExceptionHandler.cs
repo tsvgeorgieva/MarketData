@@ -13,6 +13,9 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
         {
             InvalidInputException => (StatusCodes.Status400BadRequest, exception.Message),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+            ConflictException => (StatusCodes.Status409Conflict, exception.Message),
+            UnprocessableException => (StatusCodes.Status422UnprocessableEntity, exception.Message),
+            UpstreamUnavailableException => (StatusCodes.Status503ServiceUnavailable, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred."),
         };
 

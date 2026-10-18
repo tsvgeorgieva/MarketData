@@ -11,6 +11,9 @@ internal sealed class FakeMonitoredSymbols(params string[] symbols) : IMonitored
     public Task<bool> ExistsAsync(SymbolCode symbol, CancellationToken cancellationToken) =>
         Task.FromResult(symbols.Contains(symbol.Value));
 
+    public Task<SymbolAddition> AddAsync(SymbolCode symbol, DateTimeOffset addedAt, CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     public Task RemoveAsync(SymbolCode symbol, DateTimeOffset removedAt, CancellationToken cancellationToken) =>
         throw new NotSupportedException();
 }
