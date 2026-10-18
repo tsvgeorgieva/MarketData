@@ -23,7 +23,9 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure();
 builder.Services.AddHealthChecks();
 
-// Hosted services start in order: the database is migrated and seeded before collection begins.
+// Hosted services start in this order and stop in reverse: the database is ready before anything runs,
+// and on shutdown the feed stops first so the writer can save what is still queued.
+builder.Services.AddHostedService<CandleWriterHostedService>();
 builder.Services.AddHostedService<IngestionHostedService>();
 
 var app = builder.Build();

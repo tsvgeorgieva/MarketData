@@ -1,11 +1,11 @@
 using System.Text.Json;
-using MarketData.Application.Ingestion;
+using MarketData.Domain.Interfaces;
 using MarketData.Domain.Candles;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketData.Infrastructure.Persistence;
 
-internal sealed class CandleStore(IDbContextFactory<MarketDataDbContext> dbFactory) : ICandleStore
+internal sealed class CandleRepository(IDbContextFactory<MarketDataDbContext> dbFactory) : ICandleRepository
 {
     public async Task<int> InsertMissingAsync(IReadOnlyCollection<Candle> candles, CancellationToken cancellationToken)
     {

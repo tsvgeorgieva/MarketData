@@ -1,10 +1,10 @@
-using MarketData.Application.Ingestion;
 using MarketData.Domain.Candles;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.UnitTests.Ingestion;
 
 /// <summary>Keeps Candles in memory; can be held back until released or made to fail a number of times.</summary>
-internal sealed class FakeCandleStore : ICandleStore
+internal sealed class FakeCandleRepository : ICandleRepository
 {
     private readonly List<Candle> _stored = [];
     private readonly Lock _lock = new();

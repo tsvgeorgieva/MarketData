@@ -1,7 +1,8 @@
 using System.Buffers;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
-using MarketData.Application.Ingestion;
+using MarketData.Domain.Candles;
+using MarketData.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.Infrastructure.Binance;
@@ -10,7 +11,36 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
 {
     private const int FrameSize = 16 * 1024;
 
-    public async IAsyncEnumerable<KlineUpdate> ReadAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<Candle> ReadClosedAsync([EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var update in ReadUpdatesAsync(cancellationToken))
+        {
+            if (update.IsClosed)
+            {
+                yield return update.Candle;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (socket.State == WebSocketState.Open)
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            try
+            {
+                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token);
+            }
+            catch (Exception ex) when (ex is WebSocketException or OperationCanceledException)
+            {
+                logger.LogDebug(ex, "The Binance socket was not closed cleanly");
+            }
+        }
+
+        socket.Dispose();
+    }
+
+    private async IAsyncEnumerable<KlineUpdate> ReadUpdatesAsync([EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var frame = new byte[FrameSize];
         var message = new ArrayBufferWriter<byte>();
@@ -40,23 +70,5 @@ internal sealed class BinanceStream(ClientWebSocket socket, ILogger<BinanceStrea
 
             message.Clear();
         }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (socket.State == WebSocketState.Open)
-        {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            try
-            {
-                await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, null, timeout.Token);
-            }
-            catch (Exception ex) when (ex is WebSocketException or OperationCanceledException)
-            {
-                logger.LogDebug(ex, "The Binance socket was not closed cleanly");
-            }
-        }
-
-        socket.Dispose();
     }
 }

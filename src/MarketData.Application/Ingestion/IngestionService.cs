@@ -1,17 +1,13 @@
-using System.Threading.Channels;
-using MarketData.Application.Symbols;
-using MarketData.Domain.Candles;
+using MarketData.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace MarketData.Application.Ingestion;
 
-/// <summary>Collects closed one-minute Candles for every Monitored Symbol from one Binance stream.</summary>
+/// <summary>Reads closed one-minute Candles for every Monitored Symbol from one Binance stream into the queue.</summary>
 public sealed class IngestionService(
-    IMonitoredSymbolRepository symbols,
-    IBinanceStreamFactory streams,
-    CandleWriter writer,
-    IOptions<IngestionOptions> options,
+    IMonitoredSymbolRepository monitoredSymbolRepository,
+    IBinanceStreamFactory binanceStreamFactory,
+    CandleQueue candleQueue,
     ILogger<IngestionService> logger)
 {
     public async Task RunAsync(CancellationToken stoppingToken)
@@ -31,7 +27,7 @@ public sealed class IngestionService(
 
     private async Task CollectAsync(CancellationToken stoppingToken)
     {
-        var monitored = await symbols.ListMonitoredAsync(stoppingToken);
+        var monitored = await monitoredSymbolRepository.GetAllAsync(stoppingToken);
         if (monitored.Count == 0)
         {
             logger.LogWarning("There are no Monitored Symbols; nothing is collected");
@@ -39,35 +35,14 @@ public sealed class IngestionService(
         }
 
         var symbolCount = monitored.Count;
-        var queue = Channel.CreateBounded<Candle>(
-            new BoundedChannelOptions(options.Value.QueueCapacity)
-            {
-                FullMode = BoundedChannelFullMode.DropOldest,
-                SingleReader = true,
-                SingleWriter = true,
-            },
-            dropped => logger.LogWarning("Queue full; dropped the {Symbol} candle of {OpenTime}", dropped.Symbol, dropped.OpenTime));
+        await using var stream = await binanceStreamFactory.ConnectAsync(monitored, stoppingToken);
+        logger.LogInformation("Collecting closed candles for {Count} symbols", symbolCount);
 
-        var writing = writer.RunAsync(queue.Reader, stoppingToken);
-        try
+        await foreach (var candle in stream.ReadClosedAsync(stoppingToken))
         {
-            await using var stream = await streams.ConnectAsync(monitored, stoppingToken);
-            logger.LogInformation("Collecting closed candles for {Count} symbols", symbolCount);
-
-            await foreach (var update in stream.ReadAsync(stoppingToken))
-            {
-                if (update.IsClosed)
-                {
-                    queue.Writer.TryWrite(update.Candle);
-                }
-            }
-
-            logger.LogWarning("The Binance stream ended; collection has stopped");
+            candleQueue.Enqueue(candle);
         }
-        finally
-        {
-            queue.Writer.Complete();
-            await writing;
-        }
+
+        logger.LogWarning("The Binance stream ended; collection has stopped");
     }
 }

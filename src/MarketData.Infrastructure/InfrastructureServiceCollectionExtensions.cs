@@ -1,5 +1,4 @@
-using MarketData.Application.Ingestion;
-using MarketData.Application.Symbols;
+using MarketData.Domain.Interfaces;
 using MarketData.Infrastructure.Binance;
 using MarketData.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +27,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddDbContextFactory<MarketDataDbContext>((provider, builder) =>
             builder.UseSqlServer(provider.GetRequiredService<IOptions<DatabaseOptions>>().Value.ConnectionString));
 
-        services.AddSingleton<ICandleStore, CandleStore>();
+        services.AddSingleton<ICandleRepository, CandleRepository>();
         services.AddSingleton<IMonitoredSymbolRepository, MonitoredSymbolRepository>();
         services.AddSingleton<IBinanceStreamFactory, BinanceStreamFactory>();
 

@@ -1,4 +1,4 @@
-using MarketData.Application.Ingestion;
+using MarketData.Domain.Interfaces;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;

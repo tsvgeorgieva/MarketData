@@ -1,5 +1,5 @@
 using System.Net.WebSockets;
-using MarketData.Application.Ingestion;
+using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

@@ -4,20 +4,30 @@ using Microsoft.Extensions.Options;
 
 namespace MarketData.UnitTests.Ingestion;
 
-public class IngestionServiceTests
+/// <summary>Runs the feed job and the writer job together, as the host does, against hand-written fakes.</summary>
+public sealed class IngestionServiceTests : IAsyncDisposable
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
-    private readonly FakeCandleStore _store = new();
+    private readonly FakeCandleRepository _repository = new();
+    private readonly CancellationTokenSource _writerStop = new();
+    private Task _writing = Task.CompletedTask;
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopWriterAsync();
+        _writerStop.Dispose();
+    }
 
     [Fact]
-    public async Task RunAsync_ClosedAndOpenUpdates_StoresOnlyTheClosedCandles()
+    public async Task RunAsync_ClosedCandles_AreStored()
     {
-        var feed = new ScriptedBinanceFeed([TestCandles.Open(0), TestCandles.Closed(0), TestCandles.Open(1)]);
+        var feed = new ScriptedBinanceFeed([TestCandles.At(0), TestCandles.At(1)]);
 
         await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"));
+        await StopWriterAsync();
 
-        Assert.Equal([TestCandles.At(0)], _store.Stored);
+        Assert.Equal([TestCandles.At(0), TestCandles.At(1)], _repository.Stored);
     }
 
     [Fact]
@@ -44,36 +54,37 @@ public class IngestionServiceTests
     public async Task RunAsync_DatabaseHolding_FeedIsStillReadToTheEnd()
     {
         var release = new TaskCompletionSource();
-        _store.HoldUntil = release.Task;
-        var feed = new ScriptedBinanceFeed(Enumerable.Range(0, 50).Select(minute => TestCandles.Closed(minute)));
-        var running = RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"), queueCapacity: 5);
+        _repository.HoldUntil = release.Task;
+        var feed = new ScriptedBinanceFeed(Enumerable.Range(0, 50).Select(minute => TestCandles.At(minute)));
 
-        await feed.Exhausted.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"), queueCapacity: 5);
 
         release.SetResult();
-        await running;
-        Assert.Contains(TestCandles.At(49), _store.Stored);
+        await StopWriterAsync();
+        Assert.Contains(TestCandles.At(49), _repository.Stored);
     }
 
     [Fact]
-    public async Task RunAsync_DatabaseFailsOnce_RetriesAndStoresTheCandle()
+    public async Task RunAsync_DatabaseFailsOnce_WriterRetriesAndStoresTheCandle()
     {
-        _store.FailuresToThrow = 1;
-        var feed = new ScriptedBinanceFeed([TestCandles.Closed(0)]);
+        _repository.FailuresToThrow = 1;
+        var feed = new ScriptedBinanceFeed([TestCandles.At(0)]);
 
         await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"));
+        await UntilStoredAsync(1);
 
-        Assert.Equal([TestCandles.At(0)], _store.Stored);
+        Assert.Equal([TestCandles.At(0)], _repository.Stored);
     }
 
     [Fact]
-    public async Task RunAsync_StreamFailsAfterUpdates_StoresWhatArrivedWithoutThrowing()
+    public async Task RunAsync_StreamFailsAfterCandles_StoresWhatArrivedWithoutThrowing()
     {
-        var feed = new ScriptedBinanceFeed([TestCandles.Closed(0)], thenFailWith: new IOException("connection lost"));
+        var feed = new ScriptedBinanceFeed([TestCandles.At(0)], thenFailWith: new IOException("connection lost"));
 
         await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"));
+        await StopWriterAsync();
 
-        Assert.Equal([TestCandles.At(0)], _store.Stored);
+        Assert.Equal([TestCandles.At(0)], _repository.Stored);
     }
 
     private async Task RunAsync(ScriptedBinanceFeed feed, FakeMonitoredSymbols symbols, int queueCapacity = 100)
@@ -84,9 +95,25 @@ public class IngestionServiceTests
             MaxBatchSize = 10,
             WriterRetryDelay = TimeSpan.FromMilliseconds(1),
         });
-        var writer = new CandleWriter(_store, TimeProvider.System, options, NullLogger<CandleWriter>.Instance);
-        var service = new IngestionService(symbols, feed, writer, options, NullLogger<IngestionService>.Instance);
+        var queue = new CandleQueue(options, NullLogger<CandleQueue>.Instance);
+        var writer = new CandleWriter(queue, _repository, TimeProvider.System, options, NullLogger<CandleWriter>.Instance);
+        var service = new IngestionService(symbols, feed, queue, NullLogger<IngestionService>.Instance);
 
+        _writing = writer.RunAsync(_writerStop.Token);
         await service.RunAsync(TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+    }
+
+    private async Task StopWriterAsync()
+    {
+        await _writerStop.CancelAsync();
+        await _writing.WaitAsync(Timeout);
+    }
+
+    private async Task UntilStoredAsync(int count)
+    {
+        while (_repository.Stored.Count < count)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        }
     }
 }

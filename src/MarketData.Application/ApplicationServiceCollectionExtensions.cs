@@ -19,6 +19,7 @@ public static class ApplicationServiceCollectionExtensions
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddSingleton<CandleQueue>();
         services.AddSingleton<CandleWriter>();
         services.AddSingleton<IngestionService>();
         return services;

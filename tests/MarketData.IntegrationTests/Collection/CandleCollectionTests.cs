@@ -1,5 +1,4 @@
 using System.Globalization;
-using MarketData.Application.Ingestion;
 using MarketData.Domain.Candles;
 using MarketData.Domain.Symbols;
 using MarketData.IntegrationTests.Infrastructure;
@@ -11,31 +10,16 @@ public class CandleCollectionTests(SqlServerFixture sql)
     private static readonly DateTimeOffset Start = new(2026, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public async Task ClosedUpdate_Published_IsStoredWithFullPrecision()
+    public async Task ClosedCandle_Published_IsStoredWithFullPrecision()
     {
         var connectionString = sql.NewDatabaseConnectionString();
         await using var factory = new ApiFactory(connectionString);
         using var client = factory.CreateClient();
         await factory.Binance.Connected;
 
-        factory.Binance.Publish(Closed("BTCUSDT", minute: 0, close: 81589.12345678m));
+        factory.Binance.PublishClosed(Candle("BTCUSDT", minute: 0, close: 81589.12345678m));
 
         await Poll.UntilAsync(async () => await CloseOf(connectionString, "BTCUSDT", 0) == 81589.12345678m, "the closed candle to be stored");
-    }
-
-    [Fact]
-    public async Task UnclosedUpdate_Published_IsNotStored()
-    {
-        var connectionString = sql.NewDatabaseConnectionString();
-        await using var factory = new ApiFactory(connectionString);
-        using var client = factory.CreateClient();
-        await factory.Binance.Connected;
-
-        factory.Binance.Publish(Unclosed("BTCUSDT", minute: 0, close: 100m));
-        factory.Binance.Publish(Closed("BTCUSDT", minute: 1, close: 101m));
-        await Poll.UntilAsync(async () => await CountAt(connectionString, "BTCUSDT", 1) == 1, "the later closed candle to be stored");
-
-        Assert.Equal(0, await CountAt(connectionString, "BTCUSDT", 0));
     }
 
     [Fact]
@@ -46,9 +30,9 @@ public class CandleCollectionTests(SqlServerFixture sql)
         using var client = factory.CreateClient();
         await factory.Binance.Connected;
 
-        factory.Binance.Publish(Closed("BTCUSDT", minute: 0, close: 100m));
-        factory.Binance.Publish(Closed("BTCUSDT", minute: 0, close: 200m));
-        factory.Binance.Publish(Closed("BTCUSDT", minute: 1, close: 101m));
+        factory.Binance.PublishClosed(Candle("BTCUSDT", minute: 0, close: 100m));
+        factory.Binance.PublishClosed(Candle("BTCUSDT", minute: 0, close: 200m));
+        factory.Binance.PublishClosed(Candle("BTCUSDT", minute: 1, close: 101m));
         await Poll.UntilAsync(async () => await CountAt(connectionString, "BTCUSDT", 1) == 1, "the later candle to be stored");
 
         Assert.Equal(100m, await CloseOf(connectionString, "BTCUSDT", 0));
@@ -84,10 +68,6 @@ public class CandleCollectionTests(SqlServerFixture sql)
 
         Assert.Equal(["ADAUSDT", "BTCUSDT"], symbols.Select(symbol => symbol.Value));
     }
-
-    private static KlineUpdate Closed(string symbol, int minute, decimal close) => new(Candle(symbol, minute, close), IsClosed: true);
-
-    private static KlineUpdate Unclosed(string symbol, int minute, decimal close) => new(Candle(symbol, minute, close), IsClosed: false);
 
     private static Candle Candle(string symbol, int minute, decimal close) =>
         new(SymbolCode.Parse(symbol), Start.AddMinutes(minute), close, close, close, close, 1m);

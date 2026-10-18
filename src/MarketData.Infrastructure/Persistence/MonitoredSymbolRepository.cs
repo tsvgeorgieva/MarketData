@@ -1,4 +1,4 @@
-using MarketData.Application.Symbols;
+using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,7 +6,7 @@ namespace MarketData.Infrastructure.Persistence;
 
 internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbContext> dbFactory) : IMonitoredSymbolRepository
 {
-    public async Task<IReadOnlyList<SymbolCode>> ListMonitoredAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<SymbolCode>> GetAllAsync(CancellationToken cancellationToken)
     {
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         return await db.MonitoredSymbols

@@ -1,4 +1,3 @@
-using MarketData.Application.Ingestion;
 using MarketData.Domain.Candles;
 using MarketData.Domain.Symbols;
 
@@ -10,8 +9,4 @@ internal static class TestCandles
 
     public static Candle At(int minute, string symbol = "BTCUSDT", decimal close = 100m) =>
         new(SymbolCode.Parse(symbol), Start.AddMinutes(minute), close, close, close, close, 1m);
-
-    public static KlineUpdate Closed(int minute, string symbol = "BTCUSDT") => new(At(minute, symbol), IsClosed: true);
-
-    public static KlineUpdate Open(int minute, string symbol = "BTCUSDT") => new(At(minute, symbol), IsClosed: false);
 }
