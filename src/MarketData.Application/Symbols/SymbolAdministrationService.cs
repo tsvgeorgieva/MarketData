@@ -34,7 +34,7 @@ public sealed class SymbolAdministrationService(
             throw new UnprocessableException($"{symbol} is not a symbol that Binance is trading.");
         }
 
-        return await monitoredSymbolRepository.AddAsync(symbol, clock.GetUtcNow(), cancellationToken);
+        return await monitoredSymbolRepository.AddAsync(symbol, clock.GetUtcNow(), options.Value.MaxMonitored, cancellationToken);
     }
 
     public Task RemoveAsync(string symbolText, CancellationToken cancellationToken) =>

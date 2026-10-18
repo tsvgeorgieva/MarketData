@@ -12,5 +12,5 @@ public sealed class BinanceOptions
 
     /// <summary>The market-data-only REST host, without a path.</summary>
     [Required, RegularExpression("^https?://[^/]+$", ErrorMessage = "RestUrl must be an http:// or https:// address without a path.")]
-    public string RestUrl { get; set; } = "https://data-api.binance.vision";
+    public string RestUrl { get; set; } = "";
 }

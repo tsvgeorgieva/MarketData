@@ -258,6 +258,38 @@ public class AdminSymbolsTests(SqlServerFixture sql)
             (overCap.StatusCode, monitored.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
     }
 
+    [Fact]
+    public async Task Add_SameNewSymbolTwiceAtOnce_CreatesItOnceAndReportsTheOtherAsUnchanged()
+    {
+        await using var factory = NewFactory(out _);
+        using var client = AdminClient(factory);
+
+        var responses = await Task.WhenAll(
+            client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken),
+            client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(
+            [HttpStatusCode.OK, HttpStatusCode.Created],
+            responses.Select(response => response.StatusCode).Order());
+    }
+
+    [Fact]
+    public async Task Add_TwoNewSymbolsAtOnceWithRoomForOne_AcceptsOneAndRefusesTheOther()
+    {
+        await using var factory = NewFactory(out _);
+        await using var capped = factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, configuration) =>
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Symbols:MaxMonitored"] = "4" })));
+        using var client = AdminClient(capped);
+
+        var responses = await Task.WhenAll(
+            client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken),
+            client.PutAsync("/api/admin/symbols/SOLUSDT", content: null, TestContext.Current.CancellationToken));
+
+        Assert.Equal(
+            [HttpStatusCode.Created, HttpStatusCode.Conflict],
+            responses.Select(response => response.StatusCode).Order());
+    }
+
     private ApiFactory NewFactory(out string connectionString)
     {
         connectionString = sql.NewDatabaseConnectionString();

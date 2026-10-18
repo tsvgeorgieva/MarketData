@@ -35,14 +35,14 @@ internal sealed class BinanceSymbolCatalog : IBinanceSymbolCatalog, IDisposable
                 .Any(listed => listed.GetProperty("symbol").GetString() == symbol.Value
                     && listed.GetProperty("status").GetString() == "TRADING");
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException)
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 throw;
             }
 
-            throw new UpstreamUnavailableException("Binance could not be reached to check the symbol.");
+            throw new UpstreamUnavailableException("Binance did not answer the symbol check.");
         }
     }
 
