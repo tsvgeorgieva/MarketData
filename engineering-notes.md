@@ -1,6 +1,14 @@
 # Engineering notes
 
-Business decisions, technical design and architecture, story planning and future improvements are in the specification: [issue #18, Spec: VSG market data service](https://github.com/tsvgeorgieva/MarketData/issues/18). Those details are not repeated here.
+## Start here: the specification
+
+**The specification is the main source for the design of this solution:** [issue #18, Spec: VSG market data service](https://github.com/tsvgeorgieva/MarketData/issues/18). These notes do not repeat it. The spec covers:
+
+- **Business decisions**: the problem, the business solution and the assumptions behind it.
+- **Technical design and architecture**: the technical solution and the implementation decisions.
+- **Story planning**: the user stories that were split into the implementation tickets.
+- **Testing decisions**: how the solution is tested.
+- **Future improvements**: what was left out of this iteration, on purpose.
 
 ## 1. Items not completed due to time constraints
 
@@ -37,7 +45,3 @@ The solution was built with Claude Code and the skills library by Matt Pocock ([
 ## 3. How AI output was verified
 
 Each step above was followed by an iteration and a detailed review by the author before the next step started: the research and decisions, the spec, the tickets and each pull request. The exceptions are the unreviewed parts listed in section 1.
-
-## 4. Where to find the details
-
-Business decisions, technical design and architecture, story planning and future improvements: see the spec, [issue #18](https://github.com/tsvgeorgieva/MarketData/issues/18).
