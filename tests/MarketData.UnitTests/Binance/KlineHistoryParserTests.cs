@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using MarketData.Domain.Candles;
 using MarketData.Domain.Symbols;
@@ -19,7 +20,7 @@ public class KlineHistoryParserTests
             ]
             """;
 
-        var candles = KlineHistoryParser.Parse(JsonDocument.Parse(json).RootElement, Btc);
+        var candles = KlineHistoryParser.Parse(Encoding.UTF8.GetBytes(json), Btc);
 
         Assert.Equal(
             [
@@ -31,9 +32,13 @@ public class KlineHistoryParserTests
 
     [Fact]
     public void Parse_NoKlines_ReturnsNothing() =>
-        Assert.Empty(KlineHistoryParser.Parse(JsonDocument.Parse("[]").RootElement, Btc));
+        Assert.Empty(KlineHistoryParser.Parse("[]"u8.ToArray(), Btc));
+
+    [Fact]
+    public void Parse_KlineWithTooFewFields_Throws() =>
+        Assert.Throws<JsonException>(() => KlineHistoryParser.Parse("""[[1767268800000,"100.5"]]"""u8.ToArray(), Btc));
 
     [Fact]
     public void Parse_AnswerThatIsNotAnArray_Throws() =>
-        Assert.Throws<JsonException>(() => KlineHistoryParser.Parse(JsonDocument.Parse("""{"code":-1121}""").RootElement, Btc));
+        Assert.Throws<JsonException>(() => KlineHistoryParser.Parse("""{"code":-1121}"""u8.ToArray(), Btc));
 }
