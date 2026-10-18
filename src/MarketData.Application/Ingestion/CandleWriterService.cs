@@ -1,4 +1,6 @@
 using MarketData.Domain.Candles;
+using MarketData.Application.Ingestion.Interfaces;
+using MarketData.Application.Ingestion.Options;
 using MarketData.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,7 +9,7 @@ namespace MarketData.Application.Ingestion;
 
 /// <summary>The only consumer of the queue: builds batches of Candles and saves them, retrying when the database fails.</summary>
 public sealed class CandleWriterService(
-    CandleQueue candleQueue,
+    CandleIngestionQueue candleIngestionQueue,
     ICandleRepository candleRepository,
     TimeProvider clock,
     IOptions<IngestionOptions> options,
@@ -17,7 +19,7 @@ public sealed class CandleWriterService(
     {
         try
         {
-            while (await candleQueue.WaitToReadAsync(stoppingToken))
+            while (await candleIngestionQueue.WaitToReadAsync(stoppingToken))
             {
                 await SaveBatchAsync(DequeueBatch(), stoppingToken);
             }
@@ -47,7 +49,7 @@ public sealed class CandleWriterService(
     private List<Candle> DequeueBatch()
     {
         var batch = new List<Candle>(options.Value.MaxBatchSize);
-        while (batch.Count < options.Value.MaxBatchSize && candleQueue.TryRead(out var candle))
+        while (batch.Count < options.Value.MaxBatchSize && candleIngestionQueue.TryRead(out var candle))
         {
             batch.Add(candle);
         }

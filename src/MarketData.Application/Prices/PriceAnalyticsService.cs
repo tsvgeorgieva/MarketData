@@ -1,8 +1,9 @@
 using MarketData.Domain.Candles;
-using MarketData.Domain.Exceptions;
-using MarketData.Domain.Interfaces;
-using MarketData.Domain.Prices;
+using MarketData.Application.Prices.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Exceptions;
+using MarketData.Domain.Prices;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.Application.Prices;
 

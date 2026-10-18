@@ -304,6 +304,34 @@ public class AdminSymbolsTests(SqlServerFixture sql)
             (response.StatusCode, await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM MonitoredSymbols WHERE Symbol = 'XRPUSDT'")));
     }
 
+    [Fact]
+    public async Task Add_NewSymbol_SubscribesOnTheOpenConnectionAndCollectsItsLiveCandles()
+    {
+        await using var factory = NewFactory(out var connectionString);
+        using var client = AdminClient(factory);
+        await factory.Binance.Connected;
+
+        await client.PutAsync("/api/admin/symbols/XRPUSDT", content: null, TestContext.Current.CancellationToken);
+        await Poll.UntilAsync(() => Task.FromResult(factory.Binance.Calls.SequenceEqual(["SUBSCRIBE XRPUSDT"])), "the subscribe on the open connection");
+        factory.Binance.PublishClosed(Candle("XRPUSDT", minute: 0, close: 2.5m));
+
+        await Poll.UntilAsync(
+            async () => await TestDatabase.ScalarAsync<int>(connectionString, "SELECT COUNT(*) FROM Candles WHERE Symbol = 'XRPUSDT'") == 1,
+            "the live candle of the added symbol to be stored");
+    }
+
+    [Fact]
+    public async Task Remove_Symbol_UnsubscribesOnTheOpenConnection()
+    {
+        await using var factory = NewFactory(out _);
+        using var client = AdminClient(factory);
+        await factory.Binance.Connected;
+
+        await client.DeleteAsync("/api/admin/symbols/ETHUSDT", TestContext.Current.CancellationToken);
+
+        await Poll.UntilAsync(() => Task.FromResult(factory.Binance.Calls.SequenceEqual(["UNSUBSCRIBE ETHUSDT"])), "the unsubscribe on the open connection");
+    }
+
     private ApiFactory NewFactory(out string connectionString)
     {
         connectionString = sql.NewDatabaseConnectionString();

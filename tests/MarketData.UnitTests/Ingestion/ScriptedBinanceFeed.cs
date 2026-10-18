@@ -1,23 +1,23 @@
 using System.Runtime.CompilerServices;
 using MarketData.Domain.Candles;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
 
 namespace MarketData.UnitTests.Ingestion;
 
 /// <summary>Plays a fixed list of closed Candles, then ends or fails, and records how it was used.</summary>
 internal sealed class ScriptedBinanceFeed(IEnumerable<Candle> candles, Exception? thenFailWith = null)
-    : IBinanceStreamFactory, IBinanceStream
+    : IBinanceStream
 {
     public int Connects { get; private set; }
 
     public IReadOnlyCollection<SymbolCode>? ConnectedWith { get; private set; }
 
-    public Task<IBinanceStream> ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
+    public Task ConnectAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken)
     {
         Connects++;
         ConnectedWith = symbols;
-        return Task.FromResult<IBinanceStream>(this);
+        return Task.CompletedTask;
     }
 
     public async IAsyncEnumerable<Candle> ReadClosedAsync([EnumeratorCancellation] CancellationToken cancellationToken)
@@ -33,6 +33,10 @@ internal sealed class ScriptedBinanceFeed(IEnumerable<Candle> candles, Exception
             throw thenFailWith;
         }
     }
+
+    public Task SubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task UnsubscribeAsync(IReadOnlyCollection<SymbolCode> symbols, CancellationToken cancellationToken) => Task.CompletedTask;
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

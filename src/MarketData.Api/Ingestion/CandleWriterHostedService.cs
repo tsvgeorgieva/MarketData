@@ -1,4 +1,4 @@
-using MarketData.Application.Ingestion;
+using MarketData.Application.Ingestion.Interfaces;
 
 namespace MarketData.Api.Ingestion;
 

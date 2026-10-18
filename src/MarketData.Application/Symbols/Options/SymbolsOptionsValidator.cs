@@ -1,7 +1,7 @@
 using MarketData.Domain.Symbols;
 using Microsoft.Extensions.Options;
 
-namespace MarketData.Application.Symbols;
+namespace MarketData.Application.Symbols.Options;
 
 internal sealed class SymbolsOptionsValidator : IValidateOptions<SymbolsOptions>
 {

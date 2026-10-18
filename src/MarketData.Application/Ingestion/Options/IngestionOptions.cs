@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace MarketData.Application.Ingestion;
+namespace MarketData.Application.Ingestion.Options;
 
 public sealed class IngestionOptions
 {
@@ -13,6 +13,10 @@ public sealed class IngestionOptions
     /// </summary>
     [Range(1, 1_000_000)]
     public int QueueCapacity { get; set; } = 20 * 24 * 60;
+
+    /// <summary>Symbol changes waiting to be applied to the Binance connection; when full the oldest is dropped.</summary>
+    [Range(1, 10_000)]
+    public int SymbolChangesQueueCapacity { get; set; } = 1_000;
 
     [Range(1, 10_000)]
     public int MaxBatchSize { get; set; } = 500;

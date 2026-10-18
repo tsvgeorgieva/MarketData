@@ -1,4 +1,5 @@
 using MarketData.Application.Ingestion;
+using MarketData.Application.Ingestion.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -20,17 +21,6 @@ public sealed class IngestionServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task RunAsync_ClosedCandles_AreStored()
-    {
-        var feed = new ScriptedBinanceFeed([TestCandles.At(0), TestCandles.At(1)]);
-
-        await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"));
-        await StopWriterAsync();
-
-        Assert.Equal([TestCandles.At(0), TestCandles.At(1)], _repository.Stored);
-    }
-
-    [Fact]
     public async Task RunAsync_MonitoredSymbols_ConnectsOnceForAllOfThem()
     {
         var feed = new ScriptedBinanceFeed([]);
@@ -41,13 +31,14 @@ public sealed class IngestionServiceTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task RunAsync_NoMonitoredSymbols_DoesNotConnect()
+    public async Task RunAsync_ClosedCandles_AreStored()
     {
-        var feed = new ScriptedBinanceFeed([]);
+        var feed = new ScriptedBinanceFeed([TestCandles.At(0), TestCandles.At(1)]);
 
-        await RunAsync(feed, new FakeMonitoredSymbols());
+        await RunAsync(feed, new FakeMonitoredSymbols("BTCUSDT"));
+        await StopWriterAsync();
 
-        Assert.Equal(0, feed.Connects);
+        Assert.Equal([TestCandles.At(0), TestCandles.At(1)], _repository.Stored);
     }
 
     [Fact]
@@ -95,7 +86,7 @@ public sealed class IngestionServiceTests : IAsyncDisposable
             MaxBatchSize = 10,
             WriterRetryDelay = TimeSpan.FromMilliseconds(1),
         });
-        var queue = new CandleQueue(options, NullLogger<CandleQueue>.Instance);
+        var queue = new CandleIngestionQueue(options, NullLogger<CandleIngestionQueue>.Instance);
         var writer = new CandleWriterService(queue, _repository, TimeProvider.System, options, NullLogger<CandleWriterService>.Instance);
         var service = new IngestionService(symbols, feed, queue, NullLogger<IngestionService>.Instance);
 

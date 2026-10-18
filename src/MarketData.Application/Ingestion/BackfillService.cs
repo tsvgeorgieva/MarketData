@@ -1,7 +1,7 @@
 using MarketData.Domain.Candles;
 using MarketData.Domain.Exceptions;
-using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
+using MarketData.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace MarketData.Application.Ingestion;
@@ -12,7 +12,7 @@ namespace MarketData.Application.Ingestion;
 /// </summary>
 public sealed class BackfillService(
     IBinanceHistory binanceHistory,
-    CandleQueue candleQueue,
+    CandleIngestionQueue candleIngestionQueue,
     TimeProvider clock,
     ILogger<BackfillService> logger)
 {
@@ -37,7 +37,7 @@ public sealed class BackfillService(
 
         foreach (var candle in candles)
         {
-            candleQueue.Enqueue(candle);
+            candleIngestionQueue.Enqueue(candle);
         }
 
         logger.LogInformation("Backfilled {Count} candles for {Symbol}", candles.Count, symbol);

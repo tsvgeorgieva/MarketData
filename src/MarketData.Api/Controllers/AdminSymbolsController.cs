@@ -1,8 +1,9 @@
 using MarketData.Api.Admin;
 using MarketData.Api.Contracts;
-using MarketData.Api.Mappers;
 using MarketData.Application.Symbols;
+using MarketData.Api.Mappers;
 using Microsoft.AspNetCore.Mvc;
+using MarketData.Application.Symbols.Interfaces;
 
 namespace MarketData.Api.Controllers;
 

@@ -1,6 +1,6 @@
 using MarketData.Domain.Prices;
 
-namespace MarketData.Application.Prices;
+namespace MarketData.Application.Prices.Interfaces;
 
 public interface IPriceAnalyticsService
 {

@@ -1,5 +1,6 @@
 using MarketData.Api.Contracts;
 using MarketData.Api.Mappers;
+using MarketData.Application.Prices.Interfaces;
 using MarketData.Application.Prices;
 using Microsoft.AspNetCore.Mvc;
 

@@ -1,11 +1,11 @@
 using MarketData.Domain.Interfaces;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Time.Testing;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Serilog.Core;
+using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 
 namespace MarketData.IntegrationTests.Infrastructure;
 
@@ -38,7 +38,7 @@ public sealed class ApiFactory(
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<TimeProvider>(Clock);
-            services.AddSingleton<IBinanceStreamFactory>(Binance);
+            services.AddSingleton<IBinanceStream>(Binance);
             services.AddSingleton<IBinanceHistory>(Binance);
             services.AddSingleton<IBinanceSymbolCatalog>(Catalog);
             services.AddSingleton<ILogEventSink>(Logs);
