@@ -8,26 +8,21 @@ A proposal for running MarketData on Azure with CI/CD. Nothing here is deployed.
 GitHub Actions ── build ──▶ Azure Container Registry
        │                            │ pull
        └─ deploy ─▶ Container App (1 replica) ──▶ Azure SQL
-                        │        └─ Key Vault (admin API key)
+                        │        └─ Key Vault (secrets)
                         └─▶ Binance (outbound)
 ```
 
 | Component | Choice | Why |
 | --- | --- | --- |
-| Host | Container Apps, `minReplicas = maxReplicas = 1` | The repo already has a [Dockerfile](../Dockerfile). The app is a 24/7 WebSocket client, so it must never scale to zero, and a second replica would duplicate ingestion |
+| Host | Container Apps, `minReplicas = maxReplicas = 1` | The repo already has a [Dockerfile](../Dockerfile). The app is a 24/7 WebSocket client, so it must never scale to zero, and a second replica would duplicate ingestion. The image tested locally and in CI is the one that runs in Azure, and every deploy is a revision that can be re-activated for rollback |
 | Database | Azure SQL, DTU S0 (about USD 14.5/month) | Constant ingestion keeps serverless awake, so it would cost about USD 209/month for no benefit |
 | Database login | Managed identity (Entra), no password | Nothing to store, leak or rotate |
-| Admin API key | Key Vault reference, pinned version | The only secret left. An unpinned reference restarts the app on rotation and drops the Binance connection |
+| Secrets | Key Vault references, pinned versions | Keeps secrets out of the pipeline, the image and the app configuration. An unpinned reference restarts the app on rotation and drops the Binance connection |
 | Registry | Azure Container Registry (Basic) | Native pull with the managed identity |
 | Infrastructure | Bicep in `infra/` | Native to Azure, no state file |
 | Migrations | `Database__MigrateOnStartup=true` | Safe with one replica and needs no extra job. Revisit if replicas go above one |
 
-App Service would be cheaper (about USD 13 against 47/month) and also works. Container Apps was chosen because:
-
-- **Same artifact everywhere.** The image tested locally with `docker compose` and in CI is the one that runs in Azure. Nothing is rebuilt or repackaged per environment.
-- **Rollback is built in.** Every deploy is a revision, so reverting means re-activating the previous one.
-- **Safer secret failure.** An App Service Key Vault reference that cannot be resolved is passed to the app as the literal reference text. That text is longer than the 16-character minimum, so it would be accepted as the admin API key. The Container Apps docs do not describe this failure mode, so confirm on the first deploy that a missing secret stops the revision.
-- **Explicit always-on.** `minReplicas = 1` is a declared setting in the template. On App Service, Always On is off by default and the app unloads after 20 minutes without requests, which silently stops ingestion.
+App Service would be cheaper (about USD 13 against 47/month) and also works.
 
 ## Set up once
 
