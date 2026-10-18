@@ -107,6 +107,20 @@ public class ContentNegotiationTests(SqlServerFixture sql)
             (response.StatusCode, body.Contains("/api/{symbol}/24hAvgPrice", StringComparison.Ordinal)));
     }
 
+    [Fact]
+    public async Task Get_SwaggerUi_IsServed()
+    {
+        await using var factory = NewFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/swagger/index.html", TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(
+            (HttpStatusCode.OK, true),
+            (response.StatusCode, body.Contains("Swagger UI", StringComparison.Ordinal)));
+    }
+
     private ApiFactory NewFactory()
     {
         var factory = new ApiFactory(sql.NewDatabaseConnectionString());

@@ -52,6 +52,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.MapControllers();
 app.MapOpenApi();
+app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "MarketData v1"));
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
 
 app.Run();
