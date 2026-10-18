@@ -11,62 +11,64 @@ public sealed class PriceAnalyticsService(
     ICandlePriceAnalyticsRepository candlePriceAnalyticsRepository,
     TimeProvider clock) : IPriceAnalyticsService
 {
-    private const int MaxDataPoints = 1000;
-    private const int AveragePlaces = 8;
 
     private static readonly TimeSpan Day = TimeSpan.FromHours(24);
 
-
     public async Task<AveragePrice> GetAveragePrice24hAsync(string symbolText, CancellationToken cancellationToken)
     {
-        var symbol = ParseSymbol(symbolText);
+        var symbol = SymbolCode.TryParse(symbolText, out var parsed)
+            ? parsed
+            : throw new InvalidInputException($"The symbol must be {SymbolCode.MinLength} to {SymbolCode.MaxLength} letters or digits.");
+
         await EnsureMonitoredAsync(symbol, cancellationToken);
 
-        var now = clock.GetUtcNow();
-        return await candlePriceAnalyticsRepository.GetAveragePriceAsync(symbol, now - Day, now, cancellationToken)
+        var now = clock.GetUtcNow().UtcDateTime;
+
+        // The 1440 one-minute Candles up to the last closed one, e.g. at 12:03:30: 12:03 yesterday to 12:02 today.
+        // Every one-minute Candle is the last one of its own Interval, so this is the plain mean of those Candles.
+        var queryEnd = Candle.OpenTimeOfLastCandleBefore(now);
+        var queryStart = queryEnd + Candle.Length - Day;
+
+        return await candlePriceAnalyticsRepository.GetAveragePriceOfLastCandlesPerPeriodAsync(symbol, Period.Minute, queryStart, queryEnd, cancellationToken)
             ?? throw new NotFoundException($"No data collected yet for {symbol} in the last 24 hours.");
     }
 
-    public async Task<SimpleMovingAverage> GetSimpleMovingAverageAsync(string symbolText, int n, string p, DateTime? e, CancellationToken cancellationToken)
+    public async Task<SimpleMovingAverage> GetSimpleMovingAverageAsync(SimpleMovingAverageRequest request, CancellationToken cancellationToken)
     {
-        ValidateN(n);
-
-        var symbol = ParseSymbol(symbolText);
-        await EnsureMonitoredAsync(symbol, cancellationToken);
-
-        var period = Period.Parse(p);
+        await EnsureMonitoredAsync(request.Symbol, cancellationToken);
 
         var now = clock.GetUtcNow().UtcDateTime;
-        var end = CalculateEnd(e, now);
 
-        var (lastCandleOpen, newestBucket, windowStart) = CalculateWindow(period, n, end);
+        // Omitted or in the future means now.
+        var end = request.End < now ? request.End.Value : now;
 
-        var candles = await candlePriceAnalyticsRepository.GetLastCandlesPerPeriodAsync(symbol, period, windowStart, lastCandleOpen, cancellationToken);
-        if (candles.Count == 0)
-        {
-            throw new NotFoundException($"No data collected for {symbol} in the window of {n} x {period}.");
-        }
+        // Query range for the last n Intervals, e.g. end = 12:03, p = 5m, n = 3: from 11:50 to 12:02.
+        // It ends at the last closed Candle (12:02), which is in the newest Interval (12:00 to 12:05, one of the n).
+        // It starts n - 1 whole Intervals before that one (11:50); counting back from end or the Candle would cut an Interval in half.
+        var queryEnd = Candle.OpenTimeOfLastCandleBefore(end);
+        var lastIntervalStart = request.Period.StartOfIntervalContaining(queryEnd);
+        var queryStart = lastIntervalStart - ((request.N - 1) * request.Period.Length);
 
-        var newest = candles[^1];
-        var inProgress = period != Period.Minute
-            && BucketStart(period, newest.OpenTime.UtcDateTime) == newestBucket
-            && newestBucket + period.Length > lastCandleOpen + Candle.Length;
+        var average = await candlePriceAnalyticsRepository.GetAveragePriceOfLastCandlesPerPeriodAsync(request.Symbol, request.Period, queryStart, queryEnd, cancellationToken)
+            ?? throw new NotFoundException($"No data collected for {request.Symbol} in the window of {request.N} x {request.Period}.");
 
+        // Still forming when the newest Candle's Interval ends after the last closed minute (never true for 1m, or when the last Interval has no Candles).
+        var newestCandleOpenTime = (average.To - Candle.Length).UtcDateTime;
+        var newestIntervalEnd = request.Period.EndOfIntervalContaining(newestCandleOpenTime);
+        var inProgress = newestIntervalEnd > queryEnd + Candle.Length;
+
+        // The window starts at the start of the oldest Interval used (the unit being averaged) and ends when the last Candle used closed
+        // (how far the data really reaches). It does not end at the end of the newest Interval, which may still be forming.
         return new SimpleMovingAverage(
-            symbol,
-            period,
-            n,
-            BucketStart(period, candles[0].OpenTime.UtcDateTime),
-            newest.OpenTime.UtcDateTime + Candle.Length,
-            Math.Round(candles.Average(candle => candle.Close), AveragePlaces),
-            candles.Count,
+            request.Symbol,
+            request.Period,
+            request.N,
+            request.Period.StartOfIntervalContaining(average.From.UtcDateTime),
+            average.To.UtcDateTime,
+            average.Average,
+            average.DataPoints,
             inProgress);
     }
-
-    private static SymbolCode ParseSymbol(string symbolText) =>
-        SymbolCode.TryParse(symbolText, out var symbol)
-            ? symbol
-            : throw new InvalidInputException($"The symbol must be {SymbolCode.MinLength} to {SymbolCode.MaxLength} letters or digits.");
 
     private async Task EnsureMonitoredAsync(SymbolCode symbol, CancellationToken cancellationToken)
     {
@@ -75,34 +77,4 @@ public sealed class PriceAnalyticsService(
             throw new NotFoundException($"{symbol} is not a monitored symbol.");
         }
     }
-
-    private static void ValidateN(int n)
-    {
-        if (n is < 1 or > MaxDataPoints)
-        {
-            throw new InvalidInputException($"Parameter 'n' must be a whole number from 1 to {MaxDataPoints}.");
-        }
-    }
-
-    /// <summary>The end of the window, a UTC time: omitted or in the future means now.</summary>
-    private static DateTime CalculateEnd(DateTime? e, DateTime now)
-    {
-        var end = e ?? now;
-        return end < now ? end : now;
-    }
-
-    /// <summary>
-    /// The window of <paramref name="n"/> Buckets ending at <paramref name="end"/>. Only Candles that had closed by then count, so the newest Bucket is the one
-    /// holding the last closed minute. Buckets are aligned to the clock, so the window starts at the start of the Bucket <c>n - 1</c> before it, not at <c>end - n * period</c>.
-    /// </summary>
-    private static (DateTime LastCandleOpen, DateTime NewestBucket, DateTime WindowStart) CalculateWindow(Period period, int n, DateTime end)
-    {
-        var lastCandleOpen = new DateTime(end.Ticks - (end.Ticks % Candle.Length.Ticks), DateTimeKind.Utc) - Candle.Length;
-        var newestBucket = BucketStart(period, lastCandleOpen);
-        return (lastCandleOpen, newestBucket, newestBucket - ((n - 1) * period.Length));
-    }
-
-    /// <summary>The start of the Bucket containing <paramref name="instant"/>. Tick zero (0001-01-01) is a Monday midnight, so every Period divides the ticks evenly.</summary>
-    private static DateTime BucketStart(Period period, DateTime instant) =>
-        new(instant.Ticks - (instant.Ticks % period.Length.Ticks), DateTimeKind.Utc);
 }

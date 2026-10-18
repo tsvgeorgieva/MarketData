@@ -25,4 +25,8 @@ internal static class PriceResponseMapper
         DataPoints = average.DataPoints,
         InProgress = average.InProgress,
     };
+
+    /// <summary>Validated here at the edge of the domain: the model binder has already made sure <c>n</c> and <c>p</c> are present.</summary>
+    public static Domain.Prices.SimpleMovingAverageRequest ToRequest(string symbol, Contracts.SimpleMovingAverageRequest query) =>
+        new(symbol, query.N!.Value, query.P!, query.E);
 }

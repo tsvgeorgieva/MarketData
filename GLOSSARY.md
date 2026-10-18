@@ -34,24 +34,24 @@ _Avoid_: Last price, quote, rate
 
 **Period**:
 The length of time one data point represents in a moving average: one of 1m, 5m, 30m, 1d, 1w.
-_Avoid_: Interval, timeframe, resolution
+_Avoid_: Timeframe, resolution
 
-**Bucket**:
-The group of consecutive Candles that make up one data point of a given Period, aligned to UTC (weeks start Monday 00:00). Its value is the Price of its last Candle. A Bucket with no Candles is missing and contributes nothing; it is never filled in.
+**Interval**:
+The group of consecutive Candles that make up one data point of a given Period, aligned to UTC (weeks start Monday 00:00). Its value is the Price of its last Candle. An Interval with no Candles is missing and contributes nothing; it is never filled in.
 _Avoid_: Window, bar
 
 **Reference Instant**:
-The moment a moving average is calculated as of: the requested end time (the `e` parameter), or now when none is given. The newest data point is the Bucket containing the last minute that had closed by then, and a Candle counts only if it had closed by then.
+The moment a moving average is calculated as of: the requested end time (the `e` parameter), or now when none is given. The newest data point is the Interval containing the last minute that had closed by then, and a Candle counts only if it had closed by then.
 _Avoid_: Start time, as-of date
 
-**In-progress Bucket**:
-The newest Bucket of a moving average when its Period has not yet fully elapsed; its value is the Price of the latest closed Candle so far. It never exists for a `1m` Period, where each Bucket is one closed Candle.
-_Avoid_: Open bucket, partial bucket
+**In-progress Interval**:
+The newest Interval of a moving average when its Period has not yet fully elapsed; its value is the Price of the latest closed Candle so far. It never exists for a `1m` Period, where each Interval is one closed Candle.
+_Avoid_: Open interval, partial interval
 
 **24h Average Price**:
 The simple arithmetic mean of the Prices of all Candles in the last 24 hours, using only the Candles available.
 _Avoid_: Daily average, 24h ticker price
 
 **Simple Moving Average**:
-The arithmetic mean of the Prices of the `n` consecutive Buckets of a given Period that end with the Bucket containing the last minute closed by the Reference Instant, using only the Buckets that exist. It is partial when fewer than `n` exist.
+The arithmetic mean of the Prices of the `n` consecutive Intervals of a given Period that end with the Interval containing the last minute closed by the Reference Instant, using only the Intervals that exist. It is partial when fewer than `n` exist.
 _Avoid_: SMA line, rolling average

@@ -2,7 +2,6 @@ using MarketData.Api.Contracts;
 using MarketData.Api.Mappers;
 using MarketData.Application.Prices;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace MarketData.Api.Controllers;
 
@@ -19,9 +18,9 @@ public class PricesController(IPriceAnalyticsService priceAnalyticsService) : Co
 
     [HttpGet("SimpleMovingAverage")]
     public async Task<ActionResult<SimpleMovingAverageResponse>> GetSimpleMovingAverage(
-        string symbol, [BindRequired] int n, [BindRequired] string p, DateTime? e, CancellationToken cancellationToken)
+        string symbol, [FromQuery] Contracts.SimpleMovingAverageRequest query, CancellationToken cancellationToken)
     {
-        var average = await priceAnalyticsService.GetSimpleMovingAverageAsync(symbol, n, p, e, cancellationToken);
+        var average = await priceAnalyticsService.GetSimpleMovingAverageAsync(PriceResponseMapper.ToRequest(symbol, query), cancellationToken);
         return PriceResponseMapper.ToResponse(average);
     }
 }

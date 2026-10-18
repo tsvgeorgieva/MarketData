@@ -58,14 +58,16 @@ public class PriceAnalyticsServiceTests
     }
 
     [Fact]
-    public async Task GetAveragePrice24hAsync_Always_AsksForTheLast24HoursEndingNow()
+    public async Task GetAveragePrice24hAsync_Always_AsksForEveryOneMinuteCandleOfTheLast24HoursThatHasClosed()
     {
         _analytics.Result = AverageOf(Btc);
         var service = NewService(monitored: "BTCUSDT");
 
         await service.GetAveragePrice24hAsync("BTCUSDT", TestContext.Current.CancellationToken);
 
-        Assert.Equal((Now.AddHours(-24), Now), _analytics.RequestedWindow);
+        Assert.Equal(
+            (Period.Minute, Now.UtcDateTime.AddHours(-24), Now.UtcDateTime.AddMinutes(-1)),
+            _analytics.Requested);
     }
 
     [Fact]

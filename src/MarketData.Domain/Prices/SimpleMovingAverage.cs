@@ -3,8 +3,8 @@ using MarketData.Domain.Symbols;
 namespace MarketData.Domain.Prices;
 
 /// <summary>
-/// The mean Price of the Buckets that exist among the <paramref name="Requested"/> ones ending at the Reference Instant, with the window they cover.
-/// <paramref name="InProgress"/> is true when the newest Bucket is still forming.
+/// The mean Price of the Intervals that exist among the <paramref name="Requested"/> ones ending at the Reference Instant, with the window they cover.
+/// <paramref name="InProgress"/> is true when the newest Interval is still forming.
 /// </summary>
 public sealed record SimpleMovingAverage(
     SymbolCode Symbol,

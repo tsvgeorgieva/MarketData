@@ -25,7 +25,7 @@ public sealed class SimpleMovingAverageResponse
     [XmlElement("to")]
     public DateTime To { get; set; }
 
-    /// <summary>The mean Price, rounded to eight decimal places.</summary>
+    /// <summary>The mean Price, cut off at eight decimal places.</summary>
     [XmlElement("average")]
     public decimal Average { get; set; }
 

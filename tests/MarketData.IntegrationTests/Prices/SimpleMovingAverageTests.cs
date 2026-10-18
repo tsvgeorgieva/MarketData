@@ -195,7 +195,7 @@ public class SimpleMovingAverageTests(SqlServerFixture sql)
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Equal(
             (HttpStatusCode.BadRequest, true),
-            (response.StatusCode, Regex.IsMatch(body, $"['\"]{parameter}['\"]")));
+            (response.StatusCode, Regex.IsMatch(body, $"['\"]{parameter}['\"]", RegexOptions.IgnoreCase)));
     }
 
     private ApiFactory NewFactory()
