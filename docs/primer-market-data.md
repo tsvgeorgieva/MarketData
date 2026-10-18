@@ -36,11 +36,11 @@ Prices jump around, so a single number is noisy. A *moving average* smooths that
 
 **Plain example.** A stock closes at 10, 12, 11, 13, 14 on five days. The 3-day SMA on the last day is the average of the last three closes: (11 + 13 + 14) / 3 = **12.67**. The next day the window slides forward by one. The oldest value drops out and the new one comes in, which is why it is called "moving".
 
-In the assessment's endpoint (`SimpleMovingAverage?n=&p=&s=`):
+In the endpoint (`SimpleMovingAverage?n=&p=&e=`; the PDF calls the last parameter `s`, we renamed it `e`, see engineering-notes.md):
 
 - **`p`** is how long each data point is: 1m, 5m, 30m, 1d or 1w. Each point is one candle of that length, represented by its closing price.
 - **`n`** is how many of those points to average. `n=10, p=5m` means "the average of the last ten 5-minute closing prices", about 50 minutes of history.
-- **`s`** is the optional date and time to calculate as of. If omitted, it means "now".
+- **`e`** is the optional end date and time of the window, the moment to calculate as of. If omitted, it means "now".
 
 Traders read it like this: price above its SMA suggests an upward trend, and below suggests a downward one. A short window reacts fast but is noisy; a long window is smooth but slow.
 
@@ -48,7 +48,7 @@ Traders read it like this: price above its SMA suggests an upward trend, and bel
 
 - We store 1-minute candles only. A 5-minute point is built from five of them, a 1-day point from 1,440, and a 1-week point from 10,080.
 - A *simple* average treats every point equally. An *exponential* average weights recent points more, but the assessment does not ask for that.
-- Open questions are tracked on the wayfinder map: what to do when fewer than `n` points exist, whether `s` ends or starts the window, and how to treat gaps.
+- These were open questions on the wayfinder map and are now decided (see engineering-notes.md): fewer than `n` points gives a partial result, `e` ends the window, and gaps are never filled.
 
 ## The 24-hour average
 
