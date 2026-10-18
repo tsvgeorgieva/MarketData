@@ -50,7 +50,8 @@ internal sealed class BinanceHistory : IBinanceHistory, IDisposable
         {
             using var response = await _http.GetAsync(query, cancellationToken);
             response.EnsureSuccessStatusCode();
-            return KlineHistoryParser.Parse(await response.Content.ReadAsByteArrayAsync(cancellationToken), symbol);
+            using var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            return KlineHistoryParser.Parse(body.RootElement, symbol);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or FormatException or InvalidOperationException)
         {
