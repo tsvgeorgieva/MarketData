@@ -1,6 +1,7 @@
 using MarketData.Domain.Interfaces;
 using MarketData.Infrastructure.Binance;
 using MarketData.Infrastructure.Persistence;
+using MarketData.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IMonitoredSymbolRepository, MonitoredSymbolRepository>();
         services.AddSingleton<IBinanceStreamFactory, BinanceStreamFactory>();
 
+        services.AddSingleton<DatabaseSeeder>();
         services.AddHostedService<DatabaseInitializer>();
         return services;
     }

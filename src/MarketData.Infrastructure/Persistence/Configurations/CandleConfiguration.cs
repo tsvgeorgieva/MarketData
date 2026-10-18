@@ -2,7 +2,7 @@ using MarketData.Domain.Candles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace MarketData.Infrastructure.Persistence;
+namespace MarketData.Infrastructure.Persistence.Configurations;
 
 internal sealed class CandleConfiguration : IEntityTypeConfiguration<Candle>
 {

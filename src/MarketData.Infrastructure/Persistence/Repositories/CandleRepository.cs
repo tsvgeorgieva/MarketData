@@ -3,7 +3,7 @@ using MarketData.Domain.Interfaces;
 using MarketData.Domain.Candles;
 using Microsoft.EntityFrameworkCore;
 
-namespace MarketData.Infrastructure.Persistence;
+namespace MarketData.Infrastructure.Persistence.Repositories;
 
 internal sealed class CandleRepository(IDbContextFactory<MarketDataDbContext> dbFactory) : ICandleRepository
 {

@@ -2,7 +2,7 @@ using MarketData.Domain.Interfaces;
 using MarketData.Domain.Symbols;
 using Microsoft.EntityFrameworkCore;
 
-namespace MarketData.Infrastructure.Persistence;
+namespace MarketData.Infrastructure.Persistence.Repositories;
 
 internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbContext> dbFactory) : IMonitoredSymbolRepository
 {

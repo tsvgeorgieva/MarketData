@@ -1,7 +1,7 @@
 using MarketData.Domain.Symbols;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace MarketData.Infrastructure.Persistence;
+namespace MarketData.Infrastructure.Persistence.Configurations;
 
 internal static class Conversions
 {

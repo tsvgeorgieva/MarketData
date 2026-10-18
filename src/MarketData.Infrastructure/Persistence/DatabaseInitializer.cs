@@ -1,5 +1,3 @@
-using MarketData.Application.Symbols;
-using MarketData.Domain.Symbols;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -7,12 +5,11 @@ using Microsoft.Extensions.Options;
 
 namespace MarketData.Infrastructure.Persistence;
 
-/// <summary>Runs first at startup: migrates when asked to, then seeds the Monitored Symbols on the very first run.</summary>
+/// <summary>Runs first at startup: migrates when asked to, then seeds the database.</summary>
 internal sealed class DatabaseInitializer(
     IDbContextFactory<MarketDataDbContext> dbFactory,
     IOptions<DatabaseOptions> database,
-    IOptions<SymbolsOptions> symbols,
-    TimeProvider clock,
+    DatabaseSeeder seeder,
     ILogger<DatabaseInitializer> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -29,14 +26,7 @@ internal sealed class DatabaseInitializer(
             logger.LogInformation("Database migration on startup is off");
         }
 
-        // Rows are never deleted, so an empty table means the very first run.
-        if (!await db.MonitoredSymbols.AnyAsync(cancellationToken))
-        {
-            var now = clock.GetUtcNow();
-            db.MonitoredSymbols.AddRange(symbols.Value.Seed.Select(text => new MonitoredSymbol(SymbolCode.Parse(text), now)));
-            await db.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Seeded {Count} Monitored Symbols", symbols.Value.Seed.Count);
-        }
+        await seeder.SeedAsync(db, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

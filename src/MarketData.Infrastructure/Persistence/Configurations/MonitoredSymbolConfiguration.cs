@@ -2,7 +2,7 @@ using MarketData.Domain.Symbols;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace MarketData.Infrastructure.Persistence;
+namespace MarketData.Infrastructure.Persistence.Configurations;
 
 internal sealed class MonitoredSymbolConfiguration : IEntityTypeConfiguration<MonitoredSymbol>
 {
