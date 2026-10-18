@@ -24,6 +24,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddSingleton<ICandleWriterService, CandleWriterService>();
         services.AddSingleton<IIngestionService, IngestionService>();
         services.AddSingleton<IPriceAnalyticsService, PriceAnalyticsService>();
+        services.AddSingleton<ISymbolAdministrationService, SymbolAdministrationService>();
         return services;
     }
 }
