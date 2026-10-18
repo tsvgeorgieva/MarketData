@@ -402,3 +402,6 @@ FodyWeavers.xsd
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Local compose overrides
+.env

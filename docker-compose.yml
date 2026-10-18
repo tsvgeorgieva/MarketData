@@ -1,0 +1,32 @@
+# Local run: `docker compose up --build`. The values below are throwaway, for local use only.
+# Override them with a git-ignored .env file (see .env.example).
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:-Local-dev-only-Passw0rd}
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    volumes:
+      - sqldata:/var/opt/mssql
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MarketData: Server=db;Database=MarketData;User Id=sa;Password=${SQL_SA_PASSWORD:-Local-dev-only-Passw0rd};TrustServerCertificate=True
+      Database__MigrateOnStartup: "true"
+      Admin__ApiKey: ${ADMIN_API_KEY:-local-dev-only-admin-key}
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  sqldata:
