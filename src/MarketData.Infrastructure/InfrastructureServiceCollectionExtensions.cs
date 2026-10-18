@@ -30,6 +30,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddSingleton<ICandleRepository, CandleRepository>();
         services.AddSingleton<IMonitoredSymbolRepository, MonitoredSymbolRepository>();
+        services.AddSingleton<ICandlePriceAnalyticsRepository, CandlePriceAnalyticsRepository>();
         services.AddSingleton<IBinanceStreamFactory, BinanceStreamFactory>();
 
         services.AddSingleton<DatabaseSeeder>();

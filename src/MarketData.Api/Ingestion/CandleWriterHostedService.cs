@@ -2,7 +2,7 @@ using MarketData.Application.Ingestion;
 
 namespace MarketData.Api.Ingestion;
 
-internal sealed class CandleWriterHostedService(CandleWriter candleWriter) : BackgroundService
+internal sealed class CandleWriterHostedService(ICandleWriterService candleWriterService) : BackgroundService
 {
-    protected override Task ExecuteAsync(CancellationToken stoppingToken) => candleWriter.RunAsync(stoppingToken);
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) => candleWriterService.RunAsync(stoppingToken);
 }

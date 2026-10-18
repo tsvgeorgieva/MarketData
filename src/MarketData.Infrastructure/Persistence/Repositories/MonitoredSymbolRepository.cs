@@ -15,4 +15,10 @@ internal sealed class MonitoredSymbolRepository(IDbContextFactory<MarketDataDbCo
             .Select(monitored => monitored.Symbol)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<bool> ExistsAsync(SymbolCode symbol, CancellationToken cancellationToken)
+    {
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.MonitoredSymbols.AnyAsync(monitored => monitored.Symbol == symbol && monitored.RemovedAt == null, cancellationToken);
+    }
 }

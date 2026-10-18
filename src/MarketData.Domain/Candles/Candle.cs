@@ -10,4 +10,7 @@ public sealed record Candle(
     decimal High,
     decimal Low,
     decimal Close,
-    decimal Volume);
+    decimal Volume)
+{
+    public static readonly TimeSpan Length = TimeSpan.FromMinutes(1);
+}
