@@ -6,10 +6,10 @@ Market data collection and analysis service built with .NET 10. It collects clos
 
 | Document | What it covers |
 | --- | --- |
-| [engineering-notes.md](engineering-notes.md) | What was not completed, how AI was used and how its output was verified. **Start here** |
+| [docs/engineering-notes.md](docs/engineering-notes.md) | What was not completed, how AI was used and how its output was verified. **Start here** |
 | [Specification (issue #18)](https://github.com/tsvgeorgieva/MarketData/issues/18) | Business decisions, technical design and architecture, story planning, testing decisions and future improvements |
 | [docs/deployment-design.md](docs/deployment-design.md) | Proposed Azure deployment and CI/CD pipeline, with the reasoning behind each choice |
-| [GLOSSARY.md](GLOSSARY.md) | The vocabulary used in the code and the spec |
+| [docs/GLOSSARY.md](docs/GLOSSARY.md) | The vocabulary used in the code and the spec |
 | [docs/primer-market-data.md](docs/primer-market-data.md) | Plain-language background on candles and moving averages |
 
 ## Prerequisites
@@ -106,7 +106,7 @@ dotnet test tests/MarketData.UnitTests
 dotnet test tests/MarketData.IntegrationTests
 ```
 
-Note that the unit tests were AI-generated and have not been reviewed yet. See [engineering-notes.md](engineering-notes.md).
+Note that the unit tests were AI-generated and have not been reviewed yet. See [docs/engineering-notes.md](docs/engineering-notes.md).
 
 ## Repository layout
 

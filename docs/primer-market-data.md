@@ -1,6 +1,6 @@
 # Primer: market data terms and the Simple Moving Average
 
-Plain-language background for readers with little finance knowledge. The project's own vocabulary is in [GLOSSARY.md](../GLOSSARY.md).
+Plain-language background for readers with little finance knowledge. The project's own vocabulary is in [GLOSSARY.md](GLOSSARY.md).
 
 ## Binance and market-data terms
 

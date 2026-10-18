@@ -1,6 +1,6 @@
 # Deployment design
 
-A proposal for running MarketData on Azure and delivering it with CI/CD. Nothing here is deployed. The cost and platform research behind the choices is in [research/azure-hosting.md](research/azure-hosting.md).
+A proposal for running MarketData on Azure and delivering it with CI/CD. Nothing here is deployed. The cost and platform research behind the choices is tracked in [issue #12](https://github.com/tsvgeorgieva/MarketData/issues/12).
 
 ## Target architecture
 
@@ -95,5 +95,5 @@ Why it is shaped this way:
 ## Known limits
 
 - A new revision restarts the host, so the Binance connection drops and reconnects. The gap is backfilled by the existing startup logic, but this is why deploys go through one replica at a time and not blue/green.
-- The Binance client is still marked as needing polish for production in [engineering-notes.md](../engineering-notes.md).
+- The Binance client is still marked as needing polish for production in [engineering-notes.md](engineering-notes.md).
 - Single region, no database geo-replication, no alerting. Add an alert on "no candles stored in 5 minutes" first.
