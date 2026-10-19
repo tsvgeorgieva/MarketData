@@ -6,7 +6,7 @@ Market data collection and analysis service built with .NET 10. It collects clos
 
 | Document | What it covers |
 | --- | --- |
-| [docs/engineering-notes.md](docs/engineering-notes.md) | What was not completed, how AI was used and how its output was verified. **Start here** |
+| [docs/engineering-notes.md](docs/engineering-notes.md) | What was not completed, how AI was used, the instructions given to it, how its output was verified and where its proposals were overruled. **Start here** |
 | [Specification (issue #18)](https://github.com/tsvgeorgieva/MarketData/issues/18) | Business decisions, technical design and architecture, story planning, testing decisions and future improvements |
 | [docs/deployment-design.md](docs/deployment-design.md) | Proposed Azure deployment and CI/CD pipeline, with the reasoning behind each choice |
 | [docs/GLOSSARY.md](docs/GLOSSARY.md) | The vocabulary used in the code and the spec |
@@ -106,7 +106,31 @@ dotnet test tests/MarketData.UnitTests
 dotnet test tests/MarketData.IntegrationTests
 ```
 
-Note that the unit tests were AI-generated and have not been reviewed yet. See [docs/engineering-notes.md](docs/engineering-notes.md).
+Note that an integration test that checks the trace id of an error response occasionally fails and passes on rerun (see [docs/engineering-notes.md](docs/engineering-notes.md)), and that the unit tests were AI-generated and have not been reviewed yet. See [docs/engineering-notes.md](docs/engineering-notes.md).
+
+## Assumptions, departures and known limits
+
+The reasoning behind each is in the [specification](https://github.com/tsvgeorgieva/MarketData/issues/18).
+
+**Departures from the assessment PDF**
+
+- **`e` instead of `s`.** The PDF calls `s` the "starting" date and time, yet says that when it is omitted the current time is the reference point. A window starting at "now" would have no data, so the parameter is the **end** of a trailing window and is named `e`. To be confirmed with the business owner in a real project.
+- **Symbol management, authentication.** The PDF asks for administrative endpoints only. They require a static `X-Api-Key` (at least 16 characters, no default), because open admin endpoints would be unsafe.
+
+**Assumptions**
+
+- **One price:** the close of a closed 1-minute candle. Only closed candles are stored and nothing is ever invented: no data gives a `404`, never a zero.
+- **Time is UTC.** A day starts at 00:00 UTC and a week on Monday at 00:00 UTC. The newest Simple Moving Average period may still be forming; it is included and flagged `inProgress`.
+- **24-hour average:** the mean over the last 24 hours of stored candles, or of fewer when less has been collected. The response reports the window actually covered and the number of data points. The database cuts the mean off at eight decimal places instead of rounding it.
+- **Symbol cap:** at most 20 monitored symbols (`Symbols:MaxMonitored`; the 21st add returns `409`). At 20 symbols the data grows by about 10.5 million rows, roughly 1 GB, a year.
+- **Removing a symbol keeps its history**; a re-add resumes collection.
+- **Single instance.** Run one replica: two ingesters would duplicate collection.
+
+**Known limits (future improvements in the specification)**
+
+- **No automatic reconnect.** If the Binance connection drops (Binance closes every connection after about 24 hours), collection stops until the service is restarted. Minutes missed while the connection is down or the service is stopped stay a gap, and a restart does not backfill them.
+- **Backfill of an added symbol runs inside the `PUT` request**, so the call can wait several seconds when Binance is slow. If the history request fails, the symbol is still added and its last 24 hours stay a gap.
+Everything else that was not completed or not reviewed is listed in [docs/engineering-notes.md](docs/engineering-notes.md).
 
 ## Repository layout
 
